@@ -129,8 +129,8 @@ button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .7
 .fscroll { flex: 1; min-height: 0; overflow-y: scroll; scroll-snap-type: y mandatory; overscroll-behavior: contain; }
 .slide { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; }
 #tfscroll { margin-top: calc(var(--sb) + 46px); }
-/* top bar: Watch · Browse on the left, Add on the right (left-aligned since stage 1, so Add never crowds Browse) */
-.fviews { position: absolute; z-index: 6; top: 0; left: 0; right: 0; height: calc(var(--sb) + 46px); padding: var(--sb) var(--gr) 0 calc(var(--gl) - 12px); display: flex; align-items: center; justify-content: space-between; }
+/* top bar: Watch · Browse centred (as in v5), Add as a round icon button at the top right */
+.fviews { position: absolute; z-index: 6; top: 0; left: 0; right: 0; height: calc(var(--sb) + 46px); padding-top: var(--sb); display: flex; align-items: center; justify-content: center; }
 .fviews::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; background: rgba(10, 10, 10, .78); -webkit-backdrop-filter: saturate(1.6) blur(20px); backdrop-filter: saturate(1.6) blur(20px); box-shadow: 0 1px 0 var(--hair); transition: opacity var(--t2) var(--ease); }
 .fviews.stuck::before { opacity: 1; }
 .fseg { display: flex; gap: 4px; }
@@ -138,29 +138,35 @@ button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .7
 .fseg button[aria-pressed="true"] { color: var(--ink); }
 .fseg button[aria-pressed="true"]::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 16px; height: 3px; margin-left: -8px; border-radius: var(--rr); background: var(--ink); }
 .fviews:has(~ .browse:not([hidden])) { text-shadow: 0 1px 10px rgba(0, 0, 0, .3); }
-.addbtn { position: relative; gap: 5px; padding: 0 15px 0 11px; }
-.addbtn::after, .shead .iconbtn::after, .toast .undo::after { content: ""; position: absolute; inset: -4px; }   /* 44px hit area, same look */
+.iconbtn.solid { background: var(--fill); box-shadow: inset 0 0 0 1px var(--ring); }
+.addbtn { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 1px; width: 44px; height: 44px; }
+.shead .iconbtn::after, .toast .undo::after { content: ""; position: absolute; inset: -4px; }   /* 44px hit area, same look */
 .shead .iconbtn { position: relative; }
 .shead .iconbtn::after { inset: -6px; }
 .device.empty .addbtn { visibility: hidden; }   /* the empty state carries its own Add */
-.addbtn .ico { width: 18px; height: 18px; stroke-width: 2; }
+.addbtn .ico { width: 22px; height: 22px; stroke-width: 1.75; }
 .addbtn[aria-busy="true"] { opacity: .5; }
 .browse { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--hb) + 28px); overscroll-behavior: contain; }
 .vbox-wrap { flex: 1; min-height: 0; display: flex; }
 .vbox { position: relative; width: 100%; height: 100%; border-radius: var(--rm); overflow: hidden; background: var(--video); box-shadow: 0 24px 70px var(--gs, transparent); transition: box-shadow var(--t3) var(--ease); }
 .vframe { position: absolute; inset: 0; overflow: hidden; }
 .vframe .scene { inset: -3%; }
-.finfo { flex: none; position: relative; height: calc(172px + var(--hb)); display: flex; flex-direction: column; padding: 16px var(--gr) calc(var(--hb) + 14px) var(--gl); }
-@media (max-height: 699px) { .finfo { height: calc(150px + var(--hb)); padding-top: 12px; } }
+.finfo { flex: none; position: relative; height: calc(152px + var(--hb)); display: flex; flex-direction: column; padding: 16px var(--gr) calc(var(--hb) + 14px) var(--gl); }
+.finfo.withsender { height: calc(200px + var(--hb)); }   /* v5's sender line on top, once a sender is recorded */
+@media (max-height: 699px) { .finfo { height: calc(146px + var(--hb)); padding-top: 12px; } .finfo.withsender { height: calc(190px + var(--hb)); } }
 .prog { position: absolute; top: 7px; left: var(--gl); right: var(--gr); height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .12); overflow: hidden; }
 .prog i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 2px; }
 .slide.ph.active .prog i { animation: prog var(--d, 15s) linear forwards; }
 .device.sheeton .slide.ph.active .prog i { animation-play-state: paused; }   /* a sheet holds the placeholder video too */
 @keyframes prog { to { width: 100%; } }
 .prog.live i { transition: width .25s linear; }
+.fsender { display: flex; align-items: center; gap: 12px; height: 36px; }
+.fsender .l1 { flex: 1; min-width: 0; font-size: 15px; line-height: 19px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fsender .l1 b { color: var(--ink); font-weight: 700; }
+.fsender + .ftitle { margin-top: 12px; }
 .fnew { flex: none; display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-weight: 700; }
 .fmt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ftitle { margin: 12px 0 0; font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: -0.022em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ftitle { margin: 2px 0 0; font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: -0.022em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .fmeta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 13px; line-height: 17px; font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .frow3 { margin-top: auto; display: flex; align-items: center; gap: 10px; min-height: 46px; }
 .fact { width: 46px; height: 46px; border-radius: 50%; background: var(--fill); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ring); display: grid; place-items: center; flex: none; }
@@ -218,6 +224,13 @@ button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .7
 .shelf { margin-top: 26px; }
 .shelf-h { display: flex; align-items: center; margin: 0; padding: 0 var(--gr) 0 var(--gl); min-height: 44px; font-size: 20px; line-height: 25px; font-weight: 800; letter-spacing: -0.03em; }
 .shelf-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px var(--gr) 6px var(--gl); scroll-padding: 0 var(--gl); scroll-snap-type: x proximity; }
+/* Up next: v5's Keep watching cards, wide 16:10 stills with the title and a New dot below */
+.kw { flex: none; display: flex; flex-direction: column; width: 236px; text-align: left; scroll-snap-align: start; border-radius: var(--rm); }
+.kwthumb { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: var(--rm); overflow: hidden; background: #161616; box-shadow: 0 12px 30px var(--sh, transparent), inset 0 0 0 1px var(--hair); }
+.kwthumb::after { content: ""; position: absolute; inset: 0; z-index: 3; background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, .5) 100%); }
+.kwline { display: flex; align-items: center; gap: 8px; margin-top: 10px; min-width: 0; }
+.kwname { flex: 1; min-width: 0; font-size: 15px; line-height: 19px; font-weight: 700; letter-spacing: -0.012em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kwn { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; line-height: 16px; font-weight: 700; }
 .tile { flex: none; display: flex; flex-direction: column; width: 112px; text-align: left; scroll-snap-align: start; border-radius: var(--rm); }
 .tthumb { position: relative; display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: var(--rs); overflow: hidden; background: #161616; box-shadow: 0 10px 26px var(--sh, transparent), inset 0 0 0 1px var(--hair); }
 .tnew { position: absolute; z-index: 4; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, .25); }
@@ -256,6 +269,8 @@ button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .7
 
 /* ---------- real players (official embeds only) ---------- */
 .vbox.rv iframe, .vbox.rv .ytslot { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.vbox.rv { container-type: size; }
+.vbox.rv.tt iframe { inset: 0; margin: auto; width: min(100cqw, calc(100cqh * 9 / 16)); height: min(100cqh, calc(100cqw * 16 / 9)); }
 .vbox.rv.yt { border-radius: 0; } /* YouTube: nothing may cover or clip any part of its player */
 .vbox.rv.ig { background: #fff; overflow-y: auto; overscroll-behavior: contain; }
 .vbox.rv.ig iframe { position: relative; inset: auto; }
@@ -281,7 +296,7 @@ button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .7
     <main class="feedtab home" id="scr-feed" aria-label="Reel Feed">
       <div class="fviews" id="fviews">
         <div class="fseg" role="group" aria-label="Feed view"><button type="button" data-fview="watch" aria-pressed="true">Watch</button><button type="button" data-fview="browse" aria-pressed="false">Browse</button></div>
-        <button type="button" class="pill ghost sm addbtn" id="addBtn" aria-label="Add a copied link"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5.25v13.5M5.25 12h13.5"/></svg>Add</button>
+        <button type="button" class="iconbtn solid addbtn" id="addBtn" aria-label="Add a copied link"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5.25v13.5M5.25 12h13.5"/></svg></button>
       </div>
       <div class="fscroll" id="tfscroll"></div>
       <div class="browse" id="browse" hidden><div id="homeBody"></div></div>
@@ -360,7 +375,7 @@ function saveMeta() { writeJson(MKEY, meta); }
 const keyOf = LK.keyOf;
 const byKey = k => list.find(r => keyOf(r) === k) || null;
 const metaOf = r => (r && meta[keyOf(r)]) || {};
-const sortedKeys = () => LK.sortRecords(list).map(keyOf);
+const sortedKeys = () => LK.sortRecords(list).map(keyOf);   // feed order: watched, then unwatched, oldest first
 
 /* ---------- colours ----------
    The glow and the Browse bleed take up to three colours from a video. With a YouTube cover the colours are measured
@@ -547,18 +562,22 @@ function stopFeed() {
   const fd = state.feed; if (!fd) return;
   clearTimeout(watchT);
   pTeardown();
-  if (fd.i >= 0) tabFeed.cur = fd.i < fd.ids.length ? fd.ids[fd.i] : '__end';
+  if (fd.i >= 0) tabFeed.cur = fd.i < fd.ids.length ? fd.ids[fd.i] : '__end';   // '__end' = on "caught up"; reopens on the newest
   $$('.slide.active', HOST.sc).forEach(s => s.classList.remove('active'));
   state.feed = null;
   updateSound();
 }
 function startTabFeed() {
+  // A forward feed: watched above, unwatched below, each oldest first, so scrolling down always means newer.
+  // The order stays put while the page is open; a video added meanwhile goes to the end, never above you.
   const ids = sortedKeys();
-  // keep the order stable while you use the app; rebuild only when the set of videos changed
-  if (!tabFeed.ids || ids.length !== tabFeed.ids.length || ids.some(k => !tabFeed.ids.includes(k))) tabFeed.ids = ids;
+  if (!tabFeed.ids) tabFeed.ids = ids;
+  else { const have = new Set(ids); tabFeed.ids = tabFeed.ids.filter(k => have.has(k)).concat(ids.filter(k => !tabFeed.ids.includes(k))); }
   const keys = tabFeed.ids;
   if (!keys.length) { HOST.sc.innerHTML = emptyHtml(); glowNow(); return; }
-  const start = tabFeed.cur === '__end' ? keys.length : Math.max(0, keys.indexOf(tabFeed.cur));
+  // open where you were; else at the first unwatched video; else on the most recent one (never on "caught up")
+  let start = keys.indexOf(tabFeed.cur);
+  if (start < 0) { const u = keys.findIndex(k => { const r = byKey(k); return r && !r.watched; }); start = u >= 0 ? u : keys.length - 1; }
   runFeed(keys, start);
 }
 function syncTabFeed() {
@@ -566,9 +585,8 @@ function syncTabFeed() {
   else { if (state.feed) stopFeed(); renderHome(); }
 }
 // Redraw after the list changed. cur: the video to land on (undefined keeps the place).
-function rebuild(cur, resort) {
+function rebuild(cur) {
   stopFeed();
-  if (resort) tabFeed.ids = null;
   if (cur !== undefined) tabFeed.cur = cur;
   updateAddBtn();
   syncTabFeed();
@@ -587,7 +605,7 @@ function slideHtml(k, i, n) {
   const r = byKey(k); if (!r) return '';
   const live = REAL && (r.platform === 'tiktok' || r.platform === 'youtube');
   const box = REAL
-    ? `<div class="vbox rv ${r.platform === 'instagram' ? 'ig' : r.platform === 'youtube' ? 'yt' : ''}" data-vbox="${i}"><div class="vcard loading">${scene(r)}</div></div>`
+    ? `<div class="vbox rv ${r.platform === 'instagram' ? 'ig' : r.platform === 'youtube' ? 'yt' : r.platform === 'tiktok' ? 'tt' : ''}" data-vbox="${i}"><div class="vcard loading">${scene(r)}</div></div>`
     : `<div class="vbox"><div class="vframe loading">${scene(r)}</div></div>`;
   // our progress line only where the player does not draw its own: YouTube (its controls fade out) and placeholders.
   // TikTok's player keeps its own bar on screen, so a second one would just repeat it.
@@ -595,15 +613,16 @@ function slideHtml(k, i, n) {
   const sound = live ? `<button class="fact sound" data-sound type="button" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Sound on' : 'Sound off'}">${soundOn ? I.soundOn : I.soundOff}</button>` : '';
   return `<article class="slide ${REAL ? '' : 'ph'}" data-i="${i}" data-k="${esc(k)}" style="--gs:${hslA(glowCols(palOf(r))[0], .4)}" aria-label="Video ${i + 1} of ${n}">
     <div class="vbox-wrap">${box}</div>
-    <div class="finfo">
+    <div class="finfo${r.sender ? ' withsender' : ''}">
       ${under}
+      ${r.sender ? `<div class="fsender"><div class="l1">From <b>${esc(r.sender)}</b> <span aria-hidden="true">·</span> <span class="num">${ago(minsAgo(r))}</span></div></div>` : ''}
       <h2 class="ftitle">${esc(titleOf(r))}</h2>
       <div class="fmeta">${metaLine(r, live)}</div>
       <div class="frow3">
         <button class="fact" type="button" data-remove="${esc(k)}" aria-label="Remove from Reel Feed">${I.trash}</button>
         ${sound}
         <span class="grow"></span>
-        <a class="pill ghost openapp" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open in ${PLAT[r.platform].app}"><span><span class="oa-long">Open in </span>${PLAT[r.platform].app}</span>${I.ext}</a>
+        <a class="pill primary openapp" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open in ${PLAT[r.platform].app}"><span><span class="oa-long">Open in </span>${PLAT[r.platform].app}</span>${I.ext}</a>
       </div>
     </div>
   </article>`;
@@ -613,7 +632,7 @@ function slideHtml(k, i, n) {
 const metaLine = (r, live) => {
   const by = byLine(r), bits = [];
   if (by) bits.push(esc(by));
-  bits.push(r.sender ? `From ${esc(r.sender)} · ${ago(minsAgo(r))}` : `Saved ${agoLong(minsAgo(r))}`);
+  if (!r.sender) bits.push(`Saved ${agoLong(minsAgo(r))}`);
   if (REAL && !live) bits.push('Tap play in the video');
   if (!REAL) bits.push('Placeholder');
   return `${r.watched ? '' : '<span class="fnew"><i class="dot"></i>New</span><span aria-hidden="true">·</span>'}<span class="fmt">${bits.join(' <span aria-hidden="true">·</span> ')}</span>`;
@@ -661,19 +680,20 @@ HOST.sc.addEventListener('animationend', e => {
 });
 
 /* ---------- Browse ----------
-   Apple TV's home, for saved videos: a hero of what's unwatched (swipe sideways through up to five, newest first),
-   then Up next, then Watched, then a quiet line with Export. */
+   Apple TV's home, for saved videos (v5): a hero of what's next (swipe sideways through up to five, in feed order),
+   then Up next as wide cards (v5's Keep watching), then Watched as tall tiles, then a quiet line with Export. */
 const home = { ids: [], cur: null };
 function heroIds() {
+  // the next five to watch, in feed order; with nothing unwatched, the five most recent
   const all = LK.sortRecords(list), fresh = all.filter(r => !r.watched);
-  let ids = (fresh.length ? fresh : all).slice(0, 5).map(keyOf);
+  let ids = (fresh.length ? fresh.slice(0, 5) : all.slice(-5).reverse()).map(keyOf);
   if (home.cur && byKey(home.cur) && !ids.includes(home.cur) && home.ids.includes(home.cur)) {   // just watched: keep it where it was
     ids.splice(Math.min(home.ids.indexOf(home.cur), ids.length), 0, home.cur); ids = ids.slice(0, 5);
   }
   return ids;
 }
 function heroSlide(k, i, n) {
-  const r = byKey(k), rt = rate(palOf(r)), h = byLine(r);
+  const r = byKey(k), rt = rate(palOf(r)), h = handleOf(r) !== titleOf(r) ? handleOf(r) : '';
   const art = rt.weak ? `<span class="hposter">${scene(r)}</span>` : `<span class="hart">${scene(r)}</span>`;
   return `<article class="hslide ${rt.weak ? 'weak' : 'strong'}" data-hi="${i}" style="--lift:${hslA(rt.lift, 1)};--sat:${rt.grey ? .9 : 1.3}" aria-label="${i + 1} of ${n}">
     <span class="hbg">${scene(r)}</span>${art}<span class="hshade"></span>
@@ -685,6 +705,10 @@ function heroSlide(k, i, n) {
     </div>
   </article>`;
 }
+function kwCard(r) {
+  const k = keyOf(r), h = handleOf(r) !== titleOf(r) ? handleOf(r) : '';
+  return `<button class="kw" type="button" data-play="${esc(k)}" aria-label="${esc(titleOf(r))}, new"><span class="kwthumb" style="--sh:${hslA(rate(palOf(r)).dom, .3)}">${scene(r)}</span><span class="kwline"><span class="kwname">${esc(titleOf(r))}</span><span class="kwn"><i class="dot"></i>New</span></span><span class="tmeta">${PLAT[r.platform].label}${h ? ' · ' + esc(h) : ''} · Saved ${agoLong(minsAgo(r))}</span></button>`;
+}
 function tileHtml(r) {
   const k = keyOf(r);
   return `<button class="tile" type="button" data-play="${esc(k)}" aria-label="${esc(titleOf(r))}${r.watched ? '' : ', new'}"><span class="tthumb" style="--sh:${hslA(rate(palOf(r)).dom, .28)}">${scene(r)}${r.watched ? '' : '<i class="tnew"></i>'}</span><span class="tcap">${esc(titleOf(r))}</span><span class="tmeta">${PLAT[r.platform].label} · ${ago(minsAgo(r))}</span></button>`;
@@ -693,15 +717,15 @@ function renderHome() {
   const ids = home.ids = heroIds();
   const start = Math.max(0, ids.indexOf(home.cur));
   home.cur = ids[start] || null;
-  const all = LK.sortRecords(list), next = all.filter(r => !r.watched), seen = all.filter(r => r.watched);
-  const shelf = (title, rs) => rs.length ? `<section class="shelf"><h2 class="shelf-h">${title}</h2><div class="shelf-row">${rs.map(tileHtml).join('')}</div></section>` : '';
+  const all = LK.sortRecords(list), next = all.filter(r => !r.watched), seen = all.filter(r => r.watched).reverse();
+  const shelf = (title, rs, card) => rs.length ? `<section class="shelf"><h2 class="shelf-h">${title}</h2><div class="shelf-row">${rs.map(card).join('')}</div></section>` : '';
   if (!list.length) { $('#homeBody').innerHTML = emptyHtml(); glowNow(); return; }
   $('#homeBody').innerHTML = `<section class="hero" aria-roledescription="carousel" aria-label="Unwatched">
       ${ids.length ? `<div class="htrack" id="htrack">${ids.map((k, i) => heroSlide(k, i, ids.length)).join('')}</div>
       <div class="hdots" aria-hidden="true">${ids.length > 1 ? ids.map((_, i) => `<i${i === start ? ' class="on"' : ''}></i>`).join('') : ''}</div>`
       : ''}
     </section>
-    ${shelf('Up next', next)}${shelf('Watched', seen)}
+    ${shelf('Up next', next, kwCard)}${shelf('Watched', seen, tileHtml)}
     ${list.length ? `<div class="bfoot"><span class="label num">${list.length} saved on this phone</span><button class="linkbtn" type="button" id="exportBtn">${I.down}Export list</button></div>` : ''}`;
   const tr = $('#htrack');
   if (tr) {
@@ -737,7 +761,7 @@ function glowNow() {
    Instagram and Snapchat have no play or pause control, so they mount only while on screen and are removed
    when you swipe away, which is what stops them. */
 const ID_OK = LK.ID_OK;
-const hasControl = s => s && (s.kind === 'tiktok' || s.kind === 'youtube');
+const hasControl = s => s && ((s.kind === 'tiktok' && !s.v2) || s.kind === 'youtube');
 let PL = [], soundOn = false, ytPoll = 0, ytApi = null, held = false;
 function pInit(ids) {
   PL = ids.map((k, i) => { const r = byKey(k); return { i, rec: r, kind: r ? r.platform : null, id: r ? r.videoId : null, frame: null, yt: null, ready: false, failed: false, loading: false }; });
@@ -797,10 +821,34 @@ function pMount(i) {
 }
 function mountTT(s, box) {
   if (!ID_OK.tiktok.test(s.id)) return;
+  if (s.v2) return mountTTv2(s, box);
   // A TikTok player loaded with autoplay=0 never reports ready, so every one loads with autoplay=1 and the
   // preloaded neighbour is paused as soon as it reports ready. muted=1 keeps it silent until then.
   const f = frameFor(`${TT_ORIGIN}/player/v1/${s.id}?autoplay=1&muted=1&loop=0&controls=1&description=0&music_info=0&rel=0&native_context_menu=0`, `TikTok video ${s.i + 1}`);
+  f.allow = TT_ALLOW;
   s.frame = f; s.ready = false; box.append(f);
+  // iPhone Safari can hold a TikTok player that never reports ready (autoplay or privacy settings): after a while,
+  // say what to do in the line below the video, never over it
+  clearTimeout(s.watchdog);
+  s.watchdog = setTimeout(() => {
+    if (PL[s.i] !== s || s.frame !== f || s.ready || !state.feed || state.feed.i !== s.i) return;
+    box.querySelectorAll('.vcard').forEach(c => c.remove());   // (it sits under the frame; this just ends the shimmer)
+    ttHint(s);
+  }, 8000);
+}
+// TikTok's own oEmbed iframe uses this allow list; matching it keeps the player's features the same as on TikTok's embeds
+const TT_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture; web-share';
+// The older embed (embed/v2) works where the player API does not, but has no play or pause control: tap to play.
+function mountTTv2(s, box) {
+  const f = frameFor(`${TT_ORIGIN}/embed/v2/${s.id}`, `TikTok video ${s.i + 1}`);
+  f.allow = TT_ALLOW;
+  f.addEventListener('load', () => { if (s.frame === f) box.querySelectorAll('.vcard').forEach(c => c.remove()); });
+  s.frame = f; s.ready = false; box.append(f);
+  ttHint(s, 'Tap play in the video');
+}
+function ttHint(s, text) {
+  const m = $(`.slide[data-i="${s.i}"] .fmt`, HOST.sc);
+  if (m && !m.dataset.hint) { m.dataset.hint = '1'; m.insertAdjacentHTML('beforeend', ` <span aria-hidden="true">·</span> ${esc(text || 'Not starting? Tap the video')}`); }
 }
 function ttSend(s, type, value) {
   if (!s || !s.frame || !s.frame.contentWindow) return;
@@ -900,7 +948,7 @@ function updateSound() {
   // every slide has its own Sound button; only the current one's player decides whether it shows
   $$('[data-sound]').forEach(b => {
     const sl = b.closest('.slide'), mine = !!(state.feed && sl && +sl.dataset.i === state.feed.i);
-    b.classList.toggle('na', mine && !!c && c.failed);
+    b.classList.toggle('na', mine && !!c && (c.failed || !hasControl(c)));
     b.setAttribute('aria-pressed', soundOn);
     b.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
     b.innerHTML = soundOn ? I.soundOn : I.soundOff;
@@ -928,7 +976,7 @@ window.addEventListener('message', e => {
   const active = state.feed && state.feed.i === s.i;
   switch (d.type) {
     case 'onPlayerReady': {
-      s.ready = true;
+      s.ready = true; clearTimeout(s.watchdog);
       const box = vboxOf(s.i); if (box) box.querySelectorAll('.vcard').forEach(c => c.remove());
       if (active && !held) { applySound(s); ttSend(s, 'play'); } else { ttSend(s, 'mute'); ttSend(s, 'pause'); }
       break;
@@ -947,7 +995,8 @@ window.addEventListener('message', e => {
       if ((code === 2005 || code === 2001) && !active) pUnmount(s.i);   // a throttled neighbour: reload when swiped to
       else if (code === 2005 || code === 2001) pFail(s, 'TikTok is busy', "TikTok's player asked us to slow down. Give it a moment, then try again.", true);
       else if (code === 1001) pFail(s, "Can't play this one here", 'TikTok says this video is not available.');
-      else if (code === 3002 && active) toast('Tap the video to start it', 'info');
+      else if (code === 3002) ttHint(s);                              // autoplay refused: a tap in the player starts it
+      else if (!s.v2) { pUnmount(s.i); s.v2 = true; if (near(s.i)) pMount(s.i); }   // any other player error: the older embed
       break;
     }
   }
@@ -971,7 +1020,7 @@ const FAIL = {
   dead: () => 'That video is gone or private',
   // TikTok answers a dead short link with an error that has no CORS header, so the browser cannot tell it apart
   // from a dropped connection or rate limit; the message says what is known.
-  offline: () => navigator.onLine === false ? "You're offline, try again later" : "TikTok can't find that link right now",
+  offline: () => navigator.onLine === false ? "You're offline, try again later" : "TikTok didn't answer, try again soon",
   unresolvable: p => `Can't read ${PLAT[p] ? PLAT[p].app : 'these'} share links yet`,
 };
 // Returns { ok, msg }: ok when the link is in the feed (new or already there). Adds run one after another, so a
@@ -992,14 +1041,20 @@ async function addLinkNow(text) {
   clearTimeout(slow);
   adding = false;
   $('#addBtn').removeAttribute('aria-busy');
-  if (res.status !== 'ok') return { ok: false, msg: FAIL[res.status] ? FAIL[res.status](res.platform) : FAIL.unsupported() };
+  if (res.status !== 'ok') {
+    // name the short link that failed, so it can be checked by hand or reported
+    const pl = LK.parseLink(text), detail = pl && pl.short ? pl.short.replace(/^https:\/\/(www\.)?/, '') : '';
+    return { ok: false, msg: FAIL[res.status] ? FAIL[res.status](res.platform) : FAIL.unsupported(), detail };
+  }
   const k = keyOf(res.record), a = LK.addRecord(list, res.record);
-  if (!a.added) { rebuild(k); return { ok: true, msg: 'Already in your feed', kind: 'info' }; }
+  if (!a.added) return { ok: true, msg: 'Already in your feed', kind: 'info' };
+  // the new video goes to the end of the feed; you land on it only if you were at the end already (or it is the first)
+  const fd = state.feed, atEnd = !list.length || (state.view === 'watch' ? (!fd || fd.i >= fd.ids.length) : tabFeed.cur === '__end');
   list = a.list;
   const m = Object.assign({}, meta[k], res.meta);
   if (Object.keys(m).length) { meta[k] = m; saveMeta(); }
   saveList();
-  rebuild(k, true);
+  rebuild(atEnd ? k : undefined);
   return { ok: true, msg: 'Added to your feed' };
 }
 async function addAndTell(text) {
@@ -1041,7 +1096,7 @@ document.addEventListener('submit', async e => {
   msg.textContent = '';
   const r = await addLink(inp.value);
   if (r.ok) { closeSheet(); toast(r.msg, r.kind); }
-  else if (r.msg) { hideToast(); msg.textContent = r.msg + '.'; }
+  else if (r.msg) { hideToast(); msg.textContent = r.msg + (r.detail ? ` (${r.detail})` : '') + '.'; }
 });
 
 /* ---------- sheet ---------- */

@@ -90,9 +90,10 @@ test('a dead TikTok short link is reported as dead, a failed lookup as offline',
   const noId = stubFetch([['tiktok.com/oembed', { status: 200, body: { title: 'x' } }]]);
   assert.equal((await L.cleanLink('https://vm.tiktok.com/ZMdead00/', { fetch: noId })).status, 'dead');
   const off = stubFetch([['tiktok.com/oembed', 'throw']]);
-  assert.equal((await L.cleanLink('https://vm.tiktok.com/ZMabc123/', { fetch: off })).status, 'offline');
+  assert.equal((await L.cleanLink('https://vm.tiktok.com/ZMabc123/', { fetch: off, retryDelay: 0 })).status, 'offline');
+  assert.equal(off.calls.length, 2, 'a failed request is tried once more');
   const busy = stubFetch([['tiktok.com/oembed', { status: 429, body: {} }]]);
-  assert.equal((await L.cleanLink('https://vm.tiktok.com/ZMabc123/', { fetch: busy })).status, 'offline');
+  assert.equal((await L.cleanLink('https://vm.tiktok.com/ZMabc123/', { fetch: busy, retryDelay: 0 })).status, 'offline');
 });
 
 test('a full TikTok link needs no lookup', async () => {
@@ -202,10 +203,19 @@ test('dedupe key is platform plus id, whatever the link looked like', async () =
   assert.notEqual(L.keyOf(other), L.keyOf(a.record));
 });
 
-test('order: unwatched first, newest first within each', () => {
+test('order: a forward feed, watched above, unwatched below, each oldest first', () => {
   const r = (id, day, watched) => ({ url: 'u', platform: 'tiktok', videoId: id, savedAt: `2026-11-0${day}T10:00:00.000Z`, watched, sender: null });
   const sorted = L.sortRecords([r('1000001', 1, false), r('1000002', 3, true), r('1000003', 2, false), r('1000004', 4, true)]);
-  assert.deepEqual(sorted.map(x => x.videoId), ['1000003', '1000001', '1000004', '1000002']);
+  assert.deepEqual(sorted.map(x => x.videoId), ['1000002', '1000004', '1000001', '1000003']);
+  assert.equal(L.startIndex(sorted), 2, 'opens at the first unwatched video');
+});
+
+test('start: the most recent video when everything is watched, 0 for an empty list', () => {
+  const r = (id, day) => ({ url: 'u', platform: 'tiktok', videoId: id, savedAt: `2026-11-0${day}T10:00:00.000Z`, watched: true, sender: null });
+  const sorted = L.sortRecords([r('1000002', 3), r('1000001', 1), r('1000003', 2)]);
+  assert.deepEqual(sorted.map(x => x.videoId), ['1000001', '1000003', '1000002']);
+  assert.equal(L.startIndex(sorted), 2);
+  assert.equal(L.startIndex([]), 0);
 });
 
 test('records read back from storage are re-checked', () => {
@@ -235,4 +245,26 @@ test('pasted text with words around the link, or a link without https, still wor
   assert.equal(f.calls[0], 'https://www.tiktok.com/oembed?url=' + encodeURIComponent('https://vm.tiktok.com/ZMabc123/'));
   const c = await L.cleanLink('lol www.instagram.com/reel/' + IG_CODE + '/?igsh=x', { fetch: noFetch });
   assert.equal(c.record.url, 'https://www.instagram.com/reel/' + IG_CODE + '/');
+});
+
+test('a TikTok lookup that fails once and then answers still saves the video', async () => {
+  let n = 0;
+  const flaky = async () => { if (n++ === 0) throw new TypeError('Failed to fetch'); return { ok: true, status: 200, json: async () => ({ embed_product_id: TT_ID }) }; };
+  const res = await L.cleanLink('Check out this video! https://www.tiktok.com/t/ZTfksoXuV/?_t=ZT-8xyz&_r=1\n', { fetch: flaky, retryDelay: 0 });
+  assert.equal(res.status, 'ok');
+  assert.equal(res.record.videoId, TT_ID);
+  assert.equal(n, 2);
+});
+
+test('TikTok /t/ links without www or a trailing slash are looked up on www with the slash', () => {
+  assert.deepEqual(L.parseLink('https://tiktok.com/t/ZTfksoXuV'), { platform: 'tiktok', short: 'https://www.tiktok.com/t/ZTfksoXuV/' });
+  assert.deepEqual(L.parseLink('  tiktok.com/t/ZTfksoXuV/?_r=1  '), { platform: 'tiktok', short: 'https://www.tiktok.com/t/ZTfksoXuV/' });
+});
+
+test('a rate-limited TikTok lookup (429) is tried once more', async () => {
+  let n = 0;
+  const busyThenOk = async () => (n++ === 0 ? { ok: false, status: 429, json: async () => ({}) } : { ok: true, status: 200, json: async () => ({ embed_product_id: TT_ID }) });
+  const res = await L.cleanLink('https://www.tiktok.com/t/ZTfksoXuV/', { fetch: busyThenOk, retryDelay: 0 });
+  assert.equal(res.status, 'ok');
+  assert.equal(n, 2);
 });

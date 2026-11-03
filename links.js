@@ -144,11 +144,17 @@
   }
 
   /* TikTok short links carry no video id; TikTok's own oEmbed lookup is the official way to get it. */
-  async function resolveTikTokShort(shortUrl, fetchFn) {
+  async function resolveTikTokShort(shortUrl, fetchFn, retryDelay) {
     let r;
-    try {
-      r = await fetchFn('https://www.tiktok.com/oembed?url=' + encodeURIComponent(shortUrl), { credentials: 'omit', referrerPolicy: 'no-referrer' });
-    } catch (e) { return { status: 'offline' }; }
+    const ask = () => fetchFn('https://www.tiktok.com/oembed?url=' + encodeURIComponent(shortUrl), { credentials: 'omit', referrerPolicy: 'no-referrer' });
+    // One retry: a dropped request, a rate limit (429) or a server error often clears. (TikTok's 4xx replies carry no
+    // CORS header, so in a browser a dead link also throws here and fails twice.)
+    const again = () => new Promise(res => setTimeout(res, retryDelay == null ? 900 : retryDelay));
+    try { r = await ask(); } catch (e) { r = null; }
+    if (!r || r.status === 429 || r.status >= 500) {
+      await again();
+      try { r = await ask(); } catch (e2) { return { status: 'offline' }; }
+    }
     if (!r.ok) return { status: r.status >= 400 && r.status < 500 && r.status !== 429 ? 'dead' : 'offline' };
     let j;
     try { j = await r.json(); } catch (e) { return { status: 'dead' }; }
@@ -200,7 +206,7 @@
     let ready = p;
     if (p.short) {
       if (!fetchFn) return { status: 'offline', platform: 'tiktok' };
-      const res = await resolveTikTokShort(p.short, fetchFn);
+      const res = await resolveTikTokShort(p.short, fetchFn, o.retryDelay);
       if (res.status !== 'ok') return { status: res.status, platform: 'tiktok' };
       ready = ok('tiktok', res.id);
       meta = res.meta;
@@ -223,9 +229,16 @@
     return { list: [rec].concat(list), added: true, existing: null };
   }
 
-  /* Unwatched first, newest first within each. */
+  /* Feed order, a forward feed like TikTok's chat feed: watched videos above, then unwatched ones below, each in
+     the order saved (oldest first). Scrolling down always moves toward newer, unwatched videos. */
   function sortRecords(list) {
-    return list.slice().sort((a, b) => (Number(a.watched) - Number(b.watched)) || (Date.parse(b.savedAt) - Date.parse(a.savedAt)));
+    return list.slice().sort((a, b) => (Number(b.watched) - Number(a.watched)) || (Date.parse(a.savedAt) - Date.parse(b.savedAt)));
+  }
+
+  /* Where the feed opens: the first unwatched video, or the most recent one when everything is watched. */
+  function startIndex(sorted) {
+    const i = sorted.findIndex(r => !r.watched);
+    return i >= 0 ? i : Math.max(0, sorted.length - 1);
   }
 
   /* Whatever comes back from storage (or a future import) is checked again before it can reach a player. */
@@ -257,6 +270,6 @@
     PLATFORMS, ID_OK, TRACKING,
     extractUrl, detectPlatform, stripTracking, canonicalUrl, parseLink,
     resolveTikTokShort, checkYouTube, makeRecord, cleanLink,
-    keyOf, addRecord, sortRecords, sanitizeRecords,
+    keyOf, addRecord, sortRecords, startIndex, sanitizeRecords,
   };
 });
