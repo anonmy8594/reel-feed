@@ -4,7 +4,7 @@ Written 02/11/2026. Not tested yet: it cannot be tried from the Mac, and it only
 `https://anonmy8594.github.io/reel-feed/`.
 
 What it does: in TikTok, Instagram, YouTube or Snapchat you tap Share, pick "Save to Reel Feed", and the link opens
-Reel Feed with `?add=<the link>`. The page cleans the link (tracking codes off, short links looked up), saves it, and
+Reel Feed with `#add=<the link>`. The page cleans the link (tracking codes off, short links looked up), saves it, and
 says "Added to your feed".
 
 ## Build it (about 3 minutes)
@@ -19,7 +19,7 @@ says "Added to your feed".
 6. Search for `Text`, tap the **Text** action. In its box type:
 
    ```
-   https://anonmy8594.github.io/reel-feed/?add=
+   https://anonmy8594.github.io/reel-feed/#add=
    ```
 
    Then, right after the `=` with no space, tap **URL Encoded Text** in the bar above the keyboard to insert it.
