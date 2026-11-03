@@ -1018,8 +1018,8 @@ async function onAddTap() {
   } catch (e) { clearTimeout(slowT); if (!slow) openPaste(''); return; }  // refused, or no clipboard access here
   clearTimeout(slowT);
   if (slow) {                                                    // answered after the paste sheet opened: use it if the sheet is still empty
-    const inp = $('#pasteInput');
-    if (inp && !inp.value.trim() && text && LK.extractUrl(text)) { closeSheet(); addAndTell(text); }
+    const inp = $('#pasteInput'), open = $('#sheet').classList.contains('show');   // a dismissed sheet keeps its input for 320ms
+    if (open && inp && !inp.value.trim() && text && LK.extractUrl(text)) { closeSheet(); addAndTell(text); }
     return;
   }
   if (!text || !text.trim()) return openPaste('Nothing was copied. Paste the link here.');
