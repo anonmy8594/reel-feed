@@ -770,6 +770,8 @@ function pMount(i) {
   if (s.kind === 'instagram' && ID_OK.instagram.test(s.id)) f = frameFor(`https://www.instagram.com/${/instagram\.com\/p\//.test(s.rec.url) ? 'p' : 'reel'}/${s.id}/embed/`, n);
   else if (s.kind === 'snapchat' && ID_OK.snapchat.test(s.id)) { f = frameFor(`https://www.snapchat.com/spotlight/${s.id}/embed`, n); f.className = 'snapchat-embed-iframe'; }
   if (!f) return;
+  // these embeds send no ready signal, so the loading card goes once the frame has loaded
+  f.addEventListener('load', () => { if (s.frame === f) box.querySelectorAll('.vcard').forEach(c => c.remove()); });
   s.frame = f; box.append(f);
 }
 function mountTT(s, box) {
@@ -1124,6 +1126,12 @@ document.addEventListener('keydown', e => {
 // ?add=<link> (or #add=<link>, which never reaches the web server): save it, then take it out of the address so a
 // reload does not add it again. Everything except ?mode= is dropped, in case the link arrived unencoded.
 let incoming = Q.get('add');
+// An unencoded link's own & splits it into several parameters; then everything after add= is the link.
+const rawAdd = /[?&]add=(.*)$/.exec(location.search);
+if (incoming !== null && rawAdd && !LK.parseLink(incoming)) {
+  let whole = rawAdd[1]; try { whole = decodeURIComponent(whole); } catch (e) {}
+  if (LK.parseLink(whole)) incoming = whole;
+}
 const hashAdd = /^#add=(.+)$/.exec(location.hash);
 if (incoming === null && hashAdd) { try { incoming = decodeURIComponent(hashAdd[1]); } catch (e) { incoming = hashAdd[1]; } }
 if (incoming !== null || hashAdd) {
