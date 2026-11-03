@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reel Feed</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Videos friends send you, in one swipe feed.">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reel Feed">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Reel Feed, stage 1 (02/11/2026): Novin's own saved links in the Cinema look of mockup v5.
+   Cinema: the videos are the interface. Near-black ground, white type at three strengths (100 / 68 / 54%), no accent
+   colour: actions are white pills with black text and "new" is a white dot. The screen sits on a soft glow taken from
+   the colours of the video on it. One font (Manrope), one easing curve, media corners 14.
+   Watch is the swipe feed (info below the video, nothing ever over a player); Browse follows Apple TV's home. */
+@property --g1 { syntax: '<color>'; inherits: true; initial-value: rgba(0, 0, 0, 0); }
+@property --g2 { syntax: '<color>'; inherits: true; initial-value: rgba(0, 0, 0, 0); }
+@property --g3 { syntax: '<color>'; inherits: true; initial-value: rgba(0, 0, 0, 0); }
+:root {
+  --desk: #050505;        /* backdrop around the app column on a wide screen */
+  --bg: #0A0A0A;
+  --ink: #FFFFFF;
+  --ink2: rgba(255, 255, 255, 0.68);
+  --dim: rgba(255, 255, 255, 0.54);
+  --faint: rgba(255, 255, 255, 0.30);
+  --fill: rgba(255, 255, 255, 0.08);
+  --fill2: rgba(255, 255, 255, 0.14);
+  --ring: rgba(255, 255, 255, 0.10);
+  --hair: rgba(255, 255, 255, 0.06);
+  --on-white: #0A0A0A;
+  --sheet: #141414;
+  --video: #000000;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shine: rgba(255, 255, 255, 0.07);
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* one spring-like curve for everything that moves; 200, 280 or 350 ms */
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  --t1: .2s; --t2: .28s; --t3: .35s;
+  /* radii: media 14, small media 10, minis 6, sheets 24, pills round */
+  --rm: 14px; --rs: 10px; --rx: 6px; --rsh: 24px; --rr: 999px;
+  --gl: max(20px, env(safe-area-inset-left, 0px));
+  --gr: max(20px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; background: var(--desk); overscroll-behavior: none; }
+*, *::before, *::after { box-sizing: inherit; }
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+body { height: 100%; margin: 0; background: var(--desk); color: var(--ink); font-family: var(--font); font-size: 15px; font-weight: 500; line-height: 1.35; letter-spacing: -0.005em; overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+button { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+input { font: inherit; color: inherit; letter-spacing: inherit; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--rx); }
+svg { display: block; }
+.ico { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.ico.fill { fill: currentColor; stroke: none; }
+.num { font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); flex: none; }
+.grow { flex: 1; min-width: 0; }
+
+/* pressed state: every tappable thing gives a little under the finger */
+button, a.pill { transition: transform var(--t1) var(--ease), opacity var(--t1) var(--ease), background-color var(--t1) var(--ease), color var(--t1) var(--ease); }
+button:active:not(:disabled), a.pill:active { transform: scale(.97); opacity: .72; transition-duration: .1s; }
+
+/* ---------- stage and device: full screen on a phone, a phone-wide column on a wide screen ---------- */
+.stage { position: fixed; inset: 0; display: flex; justify-content: center; }
+.device { position: relative; width: 100%; height: 100%; overflow: hidden; overflow: clip; background: var(--bg); --sb: env(safe-area-inset-top, 0px); --hb: env(safe-area-inset-bottom, 0px); isolation: isolate; }
+@media (min-width: 620px) { .device { width: 430px; box-shadow: 0 0 0 1px var(--hair); } }
+
+/* ---------- the glow: soft light from the video on screen, always behind everything ---------- */
+.glow { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; transition: --g1 var(--t3) ease, --g2 var(--t3) ease, --g3 var(--t3) ease, opacity var(--t3) ease; }
+.glow i { position: absolute; border-radius: 50%; }
+.glow i:nth-child(1) { left: -25%; top: -16%; width: 150%; height: 40%; background: radial-gradient(closest-side, var(--g1), transparent); opacity: .5; }
+.glow i:nth-child(2) { left: -32%; top: 42%; width: 164%; height: 58%; background: radial-gradient(closest-side, var(--g2), transparent); opacity: .55; }
+.glow i:nth-child(3) { left: -44%; top: 70%; width: 104%; height: 40%; background: radial-gradient(closest-side, var(--g3), transparent); opacity: .5; }
+
+.layer { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); overflow: clip; }
+
+/* ---------- type ---------- */
+.t22 { font-size: 20px; line-height: 25px; font-weight: 800; letter-spacing: -0.03em; margin: 0; }
+.label { font-size: 13px; line-height: 16px; font-weight: 600; color: var(--dim); }
+
+/* ---------- common bits ---------- */
+.iconbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--ink); }
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 20px; border-radius: var(--rr); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.pill.primary { background: var(--ink); color: var(--on-white); }
+.pill.ghost { background: var(--fill); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ring); }
+.pill.sm { min-height: 36px; padding: 0 15px; font-size: 15px; }
+.pill:disabled { background: var(--fill); color: var(--faint); box-shadow: none; cursor: default; }
+.linkbtn { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; line-height: 16px; font-weight: 600; color: var(--ink2); white-space: nowrap; min-height: 44px; }
+.linkbtn .ico { width: 15px; height: 15px; }
+
+/* loading placeholders */
+.vcard.loading, .vframe.loading { background-color: var(--fill); background-image: linear-gradient(100deg, transparent 25%, var(--shine) 50%, transparent 75%); background-size: 250% 100%; animation: shimmer 1.3s linear infinite; }
+.vframe.loading .scene { opacity: 0; }
+.scene.loading::after { content: ""; position: absolute; inset: 0; z-index: 3; background-color: #161616; background-image: linear-gradient(100deg, transparent 25%, var(--shine) 50%, transparent 75%); background-size: 250% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes shimmer { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+
+/* ---------- stills: the platform's own cover where there is one, else a quiet wash in the video's colours ---------- */
+.scene { position: absolute; inset: 0; display: block; overflow: hidden; isolation: isolate; background: linear-gradient(160deg, var(--a, #2A2A2C) 0%, var(--b, #161616) 100%); transition: opacity var(--t2) var(--ease); }
+.scene .sname { position: absolute; font-style: normal; left: 8px; right: 8px; top: 50%; transform: translateY(-50%); text-align: center; font-size: 13px; line-height: 16px; font-weight: 700; letter-spacing: -0.01em; color: rgba(255, 255, 255, .42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene .yth { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: cover; transition: opacity var(--t2) var(--ease); }
+.scene.loading .yth { opacity: 0; }
+
+/* ---------- Watch: the swipe feed ----------
+   The video runs edge to edge and as tall as the screen allows; a quiet info area sits below it. Nothing is ever placed
+   over a player (YouTube's rules, and one layout for every platform), and the glow stays behind it. */
+.feedtab { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fscroll { flex: 1; min-height: 0; overflow-y: scroll; scroll-snap-type: y mandatory; overscroll-behavior: contain; }
+.slide { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; }
+#tfscroll { margin-top: calc(var(--sb) + 46px); }
+/* top bar: Watch · Browse on the left, Add on the right (left-aligned since stage 1, so Add never crowds Browse) */
+.fviews { position: absolute; z-index: 6; top: 0; left: 0; right: 0; height: calc(var(--sb) + 46px); padding: var(--sb) var(--gr) 0 calc(var(--gl) - 12px); display: flex; align-items: center; justify-content: space-between; }
+.fviews::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; background: rgba(10, 10, 10, .78); -webkit-backdrop-filter: saturate(1.6) blur(20px); backdrop-filter: saturate(1.6) blur(20px); box-shadow: 0 1px 0 var(--hair); transition: opacity var(--t2) var(--ease); }
+.fviews.stuck::before { opacity: 1; }
+.fseg { display: flex; gap: 4px; }
+.fseg button { position: relative; min-height: 44px; padding: 0 12px; font-size: 17px; line-height: 21px; font-weight: 800; letter-spacing: -0.022em; color: var(--dim); }
+.fseg button[aria-pressed="true"] { color: var(--ink); }
+.fseg button[aria-pressed="true"]::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 16px; height: 3px; margin-left: -8px; border-radius: var(--rr); background: var(--ink); }
+.fviews:has(~ .browse:not([hidden])) { text-shadow: 0 1px 10px rgba(0, 0, 0, .3); }
+.addbtn { gap: 5px; padding: 0 15px 0 11px; }
+.addbtn .ico { width: 18px; height: 18px; stroke-width: 2; }
+.addbtn[aria-busy="true"] { opacity: .5; }
+.browse { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--hb) + 28px); overscroll-behavior: contain; }
+.vbox-wrap { flex: 1; min-height: 0; display: flex; }
+.vbox { position: relative; width: 100%; height: 100%; border-radius: var(--rm); overflow: hidden; background: var(--video); box-shadow: 0 24px 70px var(--gs, transparent); transition: box-shadow var(--t3) var(--ease); }
+.vframe { position: absolute; inset: 0; overflow: hidden; }
+.vframe .scene { inset: -3%; }
+.finfo { flex: none; position: relative; height: calc(196px + var(--hb)); display: flex; flex-direction: column; padding: 16px var(--gr) calc(var(--hb) + 14px) var(--gl); }
+.prog { position: absolute; top: 7px; left: var(--gl); right: var(--gr); height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 2px; }
+.slide.ph.active .prog i { animation: prog var(--d, 15s) linear forwards; }
+.device.sheeton .slide.ph.active .prog i { animation-play-state: paused; }   /* a sheet holds the placeholder video too */
+@keyframes prog { to { width: 100%; } }
+.prog.live i { transition: width .25s linear; }
+.fsender { display: flex; align-items: center; gap: 12px; height: 36px; }
+.fwho { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fwho .l1 { font-size: 15px; line-height: 19px; font-weight: 500; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fwho .l1 b { color: var(--ink); font-weight: 700; }
+.fwho .l2 { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 15px; font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ftitle { margin: 12px 0 0; font-size: 20px; line-height: 24px; font-weight: 700; letter-spacing: -0.022em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.fmeta { margin-top: 5px; font-size: 13px; line-height: 17px; font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frow3 { margin-top: auto; display: flex; align-items: center; gap: 10px; min-height: 46px; }
+.fact { width: 46px; height: 46px; border-radius: 50%; background: var(--fill); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ring); display: grid; place-items: center; flex: none; }
+.fact .ico { width: 20px; height: 20px; }
+.openapp { min-height: 46px; padding: 0 18px 0 20px; }
+.openapp .ico { width: 17px; height: 17px; stroke-width: 1.8; }
+.sndbtn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; color: var(--ink2); }
+.sndbtn[aria-pressed="true"] { color: var(--ink); background: var(--fill); }
+.sndbtn.na { visibility: hidden; }
+.endslide { height: 100%; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 0 36px calc(var(--hb) + 40px); color: var(--ink); }
+.endslide p { margin: 0 0 6px; color: var(--ink2); max-width: 280px; }
+.feedempty { height: 100%; display: grid; place-items: center; text-align: center; padding: 0 40px calc(var(--hb) + 46px); color: var(--ink2); }
+
+/* ---------- Browse: Apple TV's home, for saved videos ----------
+   A full-bleed hero still of what's unwatched (swipe sideways, up to five), the still's colours bleeding into
+   near-black, one white Play pill; then shelves. No player runs here; Play jumps into Watch at that video.
+   Weak stills (dark, grey or soft phone videos, or no still at all) get the blurred-frame fallback; see rate(). */
+.home { --heroh: clamp(500px, 70svh, 600px); }
+.hero { position: relative; height: var(--heroh); }
+.htrack { display: flex; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
+.hslide { position: relative; flex: none; width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; }
+.hbg, .hart, .hposter, .hshade { position: absolute; display: block; }
+.hbg { inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%); mask-image: linear-gradient(180deg, #000 62%, transparent 100%); }
+.hart { left: 0; right: 0; top: 0; height: 88%; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 56%, transparent 100%); mask-image: linear-gradient(180deg, #000 0%, #000 56%, transparent 100%); }
+.hart .scene { inset: -9% 0 9% 0; }
+.hshade { inset: 0; background: linear-gradient(180deg, rgba(10, 10, 10, .5) 0%, rgba(10, 10, 10, 0) 20%, rgba(10, 10, 10, 0) 40%, rgba(10, 10, 10, .45) 62%, rgba(10, 10, 10, .62) 84%, rgba(10, 10, 10, 0) 100%); }
+/* strong still: the still itself, blurred big, carries its colours down past the picture */
+.hslide .hbg .scene { inset: -16%; filter: blur(38px) saturate(1.5) brightness(.8); }
+/* weak still (blurred frame): the still, blurred and lifted, fills the hero; the sharp still sits on it as a poster,
+   so a dim phone video reads as a framed picture instead of a grey wall */
+.hslide.weak .hbg .scene { inset: -22%; filter: blur(44px) saturate(var(--sat, 1.3)) brightness(1.5); }
+.hslide.weak .hbg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 90% 60% at 50% 34%, var(--lift) 0%, transparent 72%); opacity: .4; }
+.hposter { left: 50%; top: calc(var(--sb) + 72px); bottom: 262px; aspect-ratio: 9 / 16; transform: translateX(-50%); border-radius: var(--rm); overflow: hidden; box-shadow: 0 28px 60px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.hposter .scene { inset: 0; }
+.hslide.weak .hshade { background: linear-gradient(180deg, rgba(10, 10, 10, .4) 0%, rgba(10, 10, 10, 0) 18%, rgba(10, 10, 10, 0) 56%, rgba(10, 10, 10, .5) 80%, rgba(10, 10, 10, 0) 100%); }
+.hcopy { position: absolute; z-index: 2; left: var(--gl); right: var(--gr); bottom: 34px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hwho { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; max-width: 100%; font-size: 13px; line-height: 17px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+.hwho > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hwho b { color: var(--ink); font-weight: 700; }
+.hnew { flex: none; display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-weight: 700; }
+.htitle { margin: 0; max-width: 330px; font-size: 34px; line-height: 37px; font-weight: 800; letter-spacing: -0.04em; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
+.hline { margin-top: 4px; max-width: 100%; font-size: 13px; line-height: 17px; font-weight: 500; color: var(--ink2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hbtns { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.hplay { min-width: 176px; min-height: 48px; gap: 8px; font-size: 17px; }
+.hplay .ico { width: 15px; height: 15px; }
+.hround { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .16); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); color: #fff; }
+.hround .ico { width: 21px; height: 21px; }
+.hdots { position: absolute; z-index: 3; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 6px; pointer-events: none; }
+.hdots i { width: 6px; height: 6px; border-radius: var(--rr); background: rgba(255, 255, 255, .32); transition: width var(--t2) var(--ease), background-color var(--t2) var(--ease); }
+.hdots i.on { width: 18px; background: #fff; }
+.hempty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; text-align: center; color: var(--ink2); }
+.shelf { margin-top: 26px; }
+.shelf-h { display: flex; align-items: center; margin: 0; padding: 0 var(--gr) 0 var(--gl); min-height: 44px; font-size: 20px; line-height: 25px; font-weight: 800; letter-spacing: -0.03em; }
+.shelf-row { display: flex; gap: 14px; overflow-x: auto; padding: 4px var(--gr) 6px var(--gl); scroll-padding: 0 var(--gl); scroll-snap-type: x proximity; }
+.tile { flex: none; display: flex; flex-direction: column; width: 112px; text-align: left; scroll-snap-align: start; border-radius: var(--rm); }
+.tthumb { position: relative; display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: var(--rs); overflow: hidden; background: #161616; box-shadow: 0 10px 26px var(--sh, transparent), inset 0 0 0 1px var(--hair); }
+.tnew { position: absolute; z-index: 4; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, .25); }
+.tcap { margin-top: 8px; font-size: 13px; line-height: 17px; font-weight: 700; letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tmeta { margin-top: 2px; font-size: 12px; line-height: 15px; font-weight: 500; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+/* the quiet line at the very end of Browse: how many are saved here, and Export */
+.bfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 30px; padding: 0 var(--gr) 0 var(--gl); }
+
+/* ---------- sheet (paste a link) and toast ---------- */
+.backdrop { position: absolute; inset: 0; background: var(--scrim); z-index: 30; opacity: 0; transition: opacity var(--t3) var(--ease); }
+.backdrop.show { opacity: 1; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 31; padding: 0 var(--gr) calc(var(--hb) + 18px) var(--gl); background: var(--sheet); border-radius: var(--rsh) var(--rsh) 0 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 -20px 60px rgba(0, 0, 0, .5); transform: translateY(105%); transition: transform var(--t3) var(--ease); }
+.sheet.show { transform: none; }
+.sheet.dragging { transition: none; }
+.grabzone { height: 24px; display: grid; place-items: center; margin: 0 calc(-1 * var(--gr)) 0 calc(-1 * var(--gl)); touch-action: none; cursor: grab; }
+.grab { width: 36px; height: 5px; border-radius: var(--rr); background: rgba(255, 255, 255, .24); }
+.shead { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; margin-bottom: 4px; touch-action: none; }
+.shead h2 { font-size: 20px; line-height: 25px; font-weight: 800; letter-spacing: -0.028em; margin: 0; }
+.shead .iconbtn { margin-right: -8px; background: var(--fill); width: 32px; height: 32px; color: var(--ink2); }
+.shead .iconbtn .ico { width: 16px; height: 16px; stroke-width: 2; }
+.snote { font-size: 13px; line-height: 17px; color: var(--dim); margin: 0 0 14px; }
+.crow { display: flex; align-items: center; gap: 8px; margin: 0; }
+.crow .field { flex: 1; min-width: 0; height: 44px; border: 0; border-radius: var(--rr); background: var(--fill); box-shadow: inset 0 0 0 1px var(--ring); padding: 0 16px; font-size: 16px; font-weight: 500; color: var(--ink); }
+.crow .field::placeholder { color: var(--dim); opacity: 1; }
+.crow .field:focus-visible { outline: none; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .5); }
+.crow .pill { min-height: 44px; }
+.smsg { min-height: 17px; margin: 10px 0 0 16px; font-size: 13px; line-height: 17px; font-weight: 600; color: var(--ink2); }
+.toast { position: absolute; z-index: 40; left: 50%; bottom: calc(var(--hb) + 16px); transform: translate(-50%, 160%); opacity: 0; pointer-events: none; transition: transform var(--t3) var(--ease), opacity var(--t2) var(--ease); display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 4px 5px 4px 16px; border-radius: var(--rr); background: var(--ink); color: var(--on-white); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; box-shadow: 0 12px 34px rgba(0, 0, 0, .5); max-width: calc(100% - 32px); }
+.toast:not(:has(.undo)) { padding-right: 18px; }
+.toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.toast span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toast .ico { width: 18px; height: 18px; stroke-width: 2.2; flex: none; }
+.toast .undo { flex: none; min-height: 36px; padding: 0 16px; border-radius: var(--rr); background: var(--on-white); color: var(--ink); font-weight: 700; }
+
+/* ---------- real players (official embeds only) ---------- */
+.vbox.rv iframe, .vbox.rv .ytslot { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.vbox.rv.yt { border-radius: 0; } /* YouTube: nothing may cover or clip any part of its player */
+.vbox.rv.ig { background: #fff; overflow-y: auto; overscroll-behavior: contain; }
+.vbox.rv.ig iframe { position: relative; inset: auto; }
+.vcard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; color: var(--ink); background: #111; }
+.vcard .vct { font-size: 17px; line-height: 21px; font-weight: 800; letter-spacing: -0.022em; }
+.vcard p { margin: 0 0 6px; font-size: 15px; line-height: 19px; color: var(--ink2); max-width: 260px; }
+.vcard.loading p { color: var(--dim); font-size: 13px; font-weight: 600; }
+.vcard .erri { width: 30px; height: 30px; color: var(--ink2); }
+.vcard .pill { min-height: 40px; font-size: 15px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled), a.pill:active { transform: none; }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="device" id="device">
+  <div class="layer">
+    <div class="glow" id="glow" aria-hidden="true"><i></i><i></i><i></i></div>
+    <main class="feedtab home" id="scr-feed" aria-label="Reel Feed">
+      <div class="fviews" id="fviews">
+        <div class="fseg" role="group" aria-label="Feed view"><button type="button" data-fview="watch" aria-pressed="true">Watch</button><button type="button" data-fview="browse" aria-pressed="false">Browse</button></div>
+        <button type="button" class="pill ghost sm addbtn" id="addBtn" aria-label="Add a copied link"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5.25v13.5M5.25 12h13.5"/></svg>Add</button>
+      </div>
+      <div class="fscroll" id="tfscroll"></div>
+      <div class="browse" id="browse" hidden><div id="homeBody"></div></div>
+    </main>
+  </div>
+  <div class="backdrop" id="backdrop" hidden></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+</div>
+
+<script src="links.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const device = $('#device');
+const LK = window.ReelLinks;
+
+/* ---------- icons: thin 1.5 strokes, round ends ---------- */
+const I = {
+  play: '<svg class="ico fill" viewBox="0 0 24 24"><path d="M7.5 5.2v13.6c0 .8.9 1.3 1.6.9l10.9-6.8c.6-.4.6-1.4 0-1.8L9.1 4.3c-.7-.4-1.6.1-1.6.9z"/></svg>',
+  x: '<svg class="ico" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+  check: '<svg class="ico" viewBox="0 0 24 24"><path d="m5.25 12.5 4.5 4.5 9-9.5"/></svg>',
+  info: '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.25"/><path d="M12 7.75v5"/><path d="M12 16.1v.1"/></svg>',
+  alert: '<svg class="ico erri" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.25"/><path d="M12 7.75v5"/><path d="M12 16.1v.1"/></svg>',
+  soundOff: '<svg class="ico" viewBox="0 0 24 24"><path d="M4.25 9.5h3.25L12 5.75v12.5L7.5 14.5H4.25z"/><path d="m16 9.75 4.5 4.5M20.5 9.75 16 14.25"/></svg>',
+  soundOn: '<svg class="ico" viewBox="0 0 24 24"><path d="M4.25 9.5h3.25L12 5.75v12.5L7.5 14.5H4.25z"/><path d="M15.75 9.25a4 4 0 0 1 0 5.5M18.25 6.75a7.5 7.5 0 0 1 0 10.5"/></svg>',
+  ext: '<svg class="ico" viewBox="0 0 24 24"><path d="M13.75 4.25h6v6"/><path d="m19.75 4.25-8.5 8.5"/><path d="M18.25 13.75v4a2 2 0 0 1-2 2H6.25a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2h4"/></svg>',
+  trash: '<svg class="ico" viewBox="0 0 24 24"><path d="M4.75 7h14.5"/><path d="M9.75 7V5.25h4.5V7"/><path d="M6.75 7l.8 11.2a1.75 1.75 0 0 0 1.75 1.55h5.4a1.75 1.75 0 0 0 1.75-1.55L17.25 7"/></svg>',
+  down: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 4.75v10.5"/><path d="m7.75 11 4.25 4.25L16.25 11"/><path d="M5.25 19.25h13.5"/></svg>',
+};
+
+/* ---------- mode ----------
+   Real players run everywhere (this Mac and the github.io page). Add ?mode=placeholder to the address to see the
+   page without any other site's players or covers. */
+const Q = new URLSearchParams(location.search);
+const LOCAL = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(location.hostname);
+const REAL = Q.get('mode') !== 'placeholder';
+const PLAT = {
+  tiktok: { label: 'TikTok', one: 'A TikTok', app: 'TikTok' },
+  youtube: { label: 'YouTube', one: 'A YouTube video', app: 'YouTube' },
+  instagram: { label: 'Instagram', one: 'An Instagram reel', app: 'Instagram' },
+  snapchat: { label: 'Snapchat', one: 'A Snapchat Spotlight', app: 'Snapchat' },
+};
+
+/* ---------- saved list: on this phone only (localStorage). Every read and write is guarded, so the page still
+   works, unsaved, when the browser refuses storage (private mode, blocked site data). ---------- */
+const KEY = 'reelfeed.links.v1';        // the records: { url, platform, videoId, savedAt, watched, sender }
+const MKEY = 'reelfeed.meta.v1';        // display extras by platform:videoId (title, handle, colours); safe to lose
+let storageOk = true;
+function readJson(k) {
+  let raw = null;
+  try { raw = localStorage.getItem(k); } catch (e) { storageOk = false; return null; }
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) {
+    try { localStorage.setItem(k + '.unreadable', raw); } catch (e2) {}   // kept aside, never silently thrown away
+    return null;
+  }
+}
+function writeJson(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+}
+let list = LK.sanitizeRecords(readJson(KEY));
+let meta = (() => { const m = readJson(MKEY); return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; })();
+let warnedStorage = false;
+function saveList() {
+  storageOk = writeJson(KEY, list);
+  if (!storageOk && !warnedStorage) { warnedStorage = true; setTimeout(() => toast('Saving is off in this browser', 'info'), 2400); }
+}
+function saveMeta() { writeJson(MKEY, meta); }
+const keyOf = LK.keyOf;
+const byKey = k => list.find(r => keyOf(r) === k) || null;
+const metaOf = r => (r && meta[keyOf(r)]) || {};
+const sortedKeys = () => LK.sortRecords(list).map(keyOf);
+
+/* ---------- colours ----------
+   The glow and the Browse bleed take up to three colours from a video. With a YouTube cover the colours are measured
+   from the picture itself; without a cover each video gets a quiet, low-colour wash of its own (from its id), which
+   rate() treats as a weak still, so it gets the blurred-frame fallback. */
+const hexRgb = h => { h = String(h).replace('#', ''); if (h.length === 3) h = h.replace(/./g, c => c + c); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const toHex = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+function hsl(h) {
+  const [r, g, b] = hexRgb(h).map(x => x / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const hh = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [hh * 60, s, l];
+}
+function hslHex(h, s, l) {
+  const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return toHex([f(0) * 255, f(8) * 255, f(4) * 255]);
+}
+function glowCols(pal) {
+  const cs = pal.map(hsl).map(([h, s, l]) => ({ h, s, l, k: s * (1 - Math.abs(l - .5) * 1.4) })).sort((x, y) => y.k - x.k);
+  return [0, 1, 2].map(i => { const c = cs[Math.min(i, cs.length - 1)]; return [Math.round(c.h), Math.round(Math.min(c.s, .78) * 100), Math.round(Math.max(.3, Math.min(.56, c.l)) * 100)]; });
+}
+const hslA = (c, al) => `hsl(${c[0]} ${c[1]}% ${c[2]}% / ${al})`;
+function setGlow(el, cols) {
+  if (!el || !cols || !cols.length) return;
+  ['--g1', '--g2', '--g3'].forEach((k, i) => el.style.setProperty(k, hslA(cols[i % cols.length], 1)));
+}
+function idPal(r) {
+  let h = 0; const s = keyOf(r);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return [hslHex(hue, .24, .26), hslHex(hue, .2, .14), hslHex(hue, .18, .2)];
+}
+const PAL_OK = p => Array.isArray(p) && p.length === 3 && p.every(c => /^#[0-9a-f]{6}$/i.test(c));
+const palOf = r => { const p = metaOf(r).pal; return PAL_OK(p) ? p : idPal(r); };
+/* Each still is rated first. Strong stills bleed as they are; weak ones (dark, grey or soft) get the blurred frame. */
+function rate(pal) {
+  const cs = pal.map(hsl), maxS = Math.max(...cs.map(c => c[1])), maxL = Math.max(...cs.map(c => c[2]));
+  const weak = maxS < .25 || maxL < .22;
+  const dom = glowCols(pal)[0];
+  // a grey still (little colour of its own) stays neutral graphite: honest grey beats an invented olive
+  const grey = maxS < .2, h = dom[0];
+  const lift = grey ? [h, 5, 24] : [h, Math.min(Math.max(dom[1], 30), 42), Math.min(Math.max(dom[2], 28), 34)];
+  return { weak, grey, dom, lift };
+}
+// Measure a loaded cover: its liveliest colour, its average and its lightest part (centre strip only, because
+// YouTube's hqdefault frames a Short with black bars at the sides).
+function measureCover(img, k) {
+  try {
+    const w = 12, h = 16, c = document.createElement('canvas'); c.width = w; c.height = h;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    const sw = img.naturalWidth * .42, sh = img.naturalHeight * .9;
+    x.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, 0, 0, w, h);
+    const d = x.getImageData(0, 0, w, h).data;
+    let sum = [0, 0, 0], best = null, bestK = -1, light = null, lightL = -1;
+    for (let i = 0; i < d.length; i += 4) {
+      const px = [d[i], d[i + 1], d[i + 2]], hx = toHex(px), [, s, l] = hsl(hx), kk = s * (1 - Math.abs(l - .5) * 1.4);
+      sum = sum.map((v, j) => v + px[j]);
+      if (kk > bestK) { bestK = kk; best = hx; }
+      if (l > lightL) { lightL = l; light = hx; }
+    }
+    const n = d.length / 4, pal = [best, toHex(sum.map(v => v / n)), light];
+    const m = meta[k] || (meta[k] = {});
+    if (JSON.stringify(m.pal) !== JSON.stringify(pal)) { m.pal = pal; saveMeta(); glowNow(); }
+  } catch (e) { /* a cover without CORS headers cannot be measured; the id colours stay */ }
+}
+
+/* ---------- covers ----------
+   YouTube: its own thumbnail on i.ytimg.com, no key. TikTok: the official oEmbed reply is meant to carry a cover
+   (thumbnail_url); in Oct 2026 it arrives without one, so covers are asked for a few at a time and asking stops at
+   the first reply that has none (TikTok rate-limits). Instagram and Snapchat have no key-free cover.
+   Placeholder mode asks no other site for anything. */
+const TT_ORIGIN = 'https://www.tiktok.com';
+const COVER = new Map(), COVER_BAD = new Set();
+const COVER_HOST = /^([\w-]+\.)*(tiktokcdn(-us|-eu)?\.com|ibyteimg\.com|ttwstatic\.com)$/i;
+function coverOf(r) {
+  if (!REAL || !r) return '';
+  const k = keyOf(r); if (COVER_BAD.has(k)) return '';
+  if (r.platform === 'youtube') return `https://i.ytimg.com/vi/${r.videoId}/hqdefault.jpg`;
+  if (r.platform === 'tiktok') { if (!COVER.has(k)) askTTCover(r); return COVER.get(k) || ''; }
+  return '';
+}
+const coverImg = (u, k, cors) => `<img class="yth" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer"${cors ? ' crossorigin="anonymous"' : ''} data-k="${esc(k)}">`;
+const scene = r => {
+  const pal = palOf(r), cov = coverOf(r), k = keyOf(r);
+  return `<span class="scene${cov ? ' loading' : ''}" style="--a:${pal[0]};--b:${pal[1]}" data-th="${esc(k)}"><i class="sname">${esc(PLAT[r.platform].label)}</i>${cov ? coverImg(cov, k, r.platform === 'youtube') : ''}</span>`;
+};
+let ttCovers = REAL;
+const ttAsked = new Set(), ttQ = [];
+let ttBusy = 0;
+function ttPump() {
+  while (ttBusy < 3 && ttQ.length) {
+    const j = ttQ.shift(); ttBusy++;
+    fetch(TT_ORIGIN + '/oembed?url=' + encodeURIComponent(j.url), { credentials: 'omit', referrerPolicy: 'no-referrer' })
+      .then(r => { if (!r.ok) throw new Error('oembed ' + r.status); return r.json(); })
+      .then(j.res, j.rej)
+      .finally(() => { ttBusy--; ttPump(); });
+  }
+}
+function askTTCover(r) {
+  const k = keyOf(r);
+  if (!ttCovers || ttAsked.has(k)) return;
+  ttAsked.add(k);
+  new Promise((res, rej) => { ttQ.push({ url: r.url, res, rej }); ttPump(); }).then(j => {
+    let u = null;
+    try { const t = new URL(String(j.thumbnail_url || '')); if (t.protocol === 'https:' && COVER_HOST.test(t.hostname)) u = t.href; } catch (e) {}
+    if (!u) { ttStopCovers(); return; }
+    COVER.set(k, u); patchCover(k, u);
+  }).catch(() => ttStopCovers());
+}
+function ttStopCovers() {
+  if (!ttCovers) return;
+  ttCovers = false;
+  ttQ.splice(0).forEach(j => j.rej(new Error('covers off')));
+}
+// A cover that arrives after the page was drawn goes into every still already on screen for that video.
+function patchCover(k, u) {
+  $$(`.scene[data-th="${CSS.escape(k)}"]`).forEach(el => {
+    if (el.querySelector('.yth')) return;
+    el.classList.add('loading');
+    el.insertAdjacentHTML('beforeend', coverImg(u, k, false));
+  });
+}
+document.addEventListener('load', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.classList.contains('yth')) return;
+  const el = img.closest('.scene'); if (el) el.classList.remove('loading');
+  if (img.crossOrigin === 'anonymous' && img.dataset.k && !metaOf(byKey(img.dataset.k)).pal) measureCover(img, img.dataset.k);
+}, true);
+// safety net: a cover that finished without its load event reaching us still ends the shimmer
+if (REAL) setInterval(() => $$('.scene.loading > .yth').forEach(img => { if (img.complete) img.closest('.scene').classList.remove('loading'); }), 1500);
+// An expired or missing cover: drop it and leave the colour wash underneath.
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.classList.contains('yth')) return;
+  const el = img.closest('.scene'), k = img.dataset.k;
+  if (k) { COVER_BAD.add(k); COVER.delete(k); }
+  if (el) el.classList.remove('loading');
+  img.remove();
+}, true);
+
+/* ---------- words ---------- */
+const minsAgo = r => Math.max(0, Math.round((Date.now() - Date.parse(r.savedAt)) / 60000));
+const ago = ts => ts < 1 ? 'now' : ts < 60 ? `${ts}m` : ts < 1440 ? `${Math.floor(ts / 60)}h` : ts < 2880 ? 'Yesterday' : `${Math.floor(ts / 1440)}d`;
+const handleOf = r => { const m = metaOf(r); return m.handle ? '@' + m.handle : m.author || ''; };
+// TikTok's oEmbed no longer gives titles, so a TikTok is named by its account, else by its platform
+const titleOf = r => metaOf(r).title || handleOf(r) || PLAT[r.platform].one;
+const byLine = r => metaOf(r).title ? handleOf(r) : '';
+const agoLong = ts => ts < 1 ? 'just now' : ts < 60 ? `${ts}m ago` : ts < 1440 ? `${Math.floor(ts / 60)}h ago` : ts < 2880 ? 'yesterday' : `${Math.floor(ts / 1440)} days ago`;
+// "Saved 2h ago", or "From Maya · 2h" once a sender is recorded (stage 2)
+const savedLine = r => r.sender ? `From <b>${esc(r.sender)}</b> <span aria-hidden="true">·</span> <span class="num">${ago(minsAgo(r))}</span>` : `Saved <span class="num">${agoLong(minsAgo(r))}</span>`;
+
+/* ---------- toast (with an optional Undo) ---------- */
+let toastT, toastUndo = null;
+function toast(msg, kind, undo) {
+  const t = $('#toast');
+  t.innerHTML = `${kind === 'info' ? I.info : kind === 'wait' ? '' : I.check}<span>${esc(msg)}</span>${undo ? '<button type="button" class="undo" id="toastUndo">Undo</button>' : ''}`;
+  toastUndo = undo || null;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(hideToast, undo ? 4000 : kind === 'wait' ? 8000 : 2400);
+}
+function hideToast() { clearTimeout(toastT); $('#toast').classList.remove('show'); toastUndo = null; }
+
+/* ---------- Watch: the swipe feed ----------
+   Opens straight into every saved video, unwatched first, newest first. The order stays put while the page is open
+   (a video you just watched does not jump away); it is sorted again on the next open or when a link is added. */
+const state = { view: 'watch', feed: null };
+const HOST = { sc: $('#tfscroll') };
+const tabFeed = { ids: null, cur: null };
+let watchT = 0;
+function runFeed(ids, start) {
+  stopFeed();
+  const fd = state.feed = { ids, i: -1, live: !REAL };
+  const sc = HOST.sc;
+  sc.innerHTML = ids.map((k, i) => slideHtml(k, i, ids.length)).join('') + endHtml();
+  if (REAL) pInit(ids);
+  const first = () => { if (state.feed !== fd || fd.i >= 0) return; sc.scrollTop = start * sc.clientHeight; setActive(start); };
+  requestAnimationFrame(first); setTimeout(first, 60);   // the timer covers a page whose frames are paused
+  // Real players start only once the screen has settled, so a player never autoplays while less than half
+  // of it is on screen (one of YouTube's rules).
+  if (REAL) setTimeout(() => {
+    if (state.feed !== fd) return;
+    fd.live = true;
+    if (fd.i < 0) { sc.scrollTop = start * sc.clientHeight; setActive(start); }
+    else pActivate(fd.i, -1);
+  }, reduceMotion ? 30 : 420);
+}
+function stopFeed() {
+  const fd = state.feed; if (!fd) return;
+  clearTimeout(watchT);
+  pTeardown();
+  if (fd.i >= 0) tabFeed.cur = fd.i < fd.ids.length ? fd.ids[fd.i] : '__end';
+  $$('.slide.active', HOST.sc).forEach(s => s.classList.remove('active'));
+  state.feed = null;
+  updateSound();
+}
+function startTabFeed() {
+  const ids = sortedKeys();
+  // keep the order stable while you use the app; rebuild only when the set of videos changed
+  if (!tabFeed.ids || ids.length !== tabFeed.ids.length || ids.some(k => !tabFeed.ids.includes(k))) tabFeed.ids = ids;
+  const keys = tabFeed.ids;
+  if (!keys.length) { HOST.sc.innerHTML = '<div class="feedempty">Copy a link in TikTok, then tap Add.</div>'; glowNow(); return; }
+  const start = tabFeed.cur === '__end' ? keys.length : Math.max(0, keys.indexOf(tabFeed.cur));
+  runFeed(keys, start);
+}
+function syncTabFeed() {
+  if (state.view === 'watch') { if (!state.feed) startTabFeed(); }
+  else { if (state.feed) stopFeed(); renderHome(); }
+}
+// Redraw after the list changed. cur: the video to land on (undefined keeps the place).
+function rebuild(cur, resort) {
+  stopFeed();
+  if (resort) tabFeed.ids = null;
+  if (cur !== undefined) tabFeed.cur = cur;
+  updateAddBtn();
+  syncTabFeed();
+  glowNow();
+}
+function setView(v) {
+  state.view = v;
+  $$('[data-fview]').forEach(b => b.setAttribute('aria-pressed', b.dataset.fview === v));
+  $('#tfscroll').hidden = v !== 'watch';
+  $('#browse').hidden = v !== 'browse';
+  $('#fviews').classList.toggle('stuck', v === 'browse' && $('#browse').scrollTop > 40);
+  syncTabFeed(); glowNow();
+}
+$('#browse').addEventListener('scroll', e => { $('#fviews').classList.toggle('stuck', e.currentTarget.scrollTop > 40); }, { passive: true });
+function slideHtml(k, i, n) {
+  const r = byKey(k); if (!r) return '';
+  const live = REAL && (r.platform === 'tiktok' || r.platform === 'youtube');
+  const box = REAL
+    ? `<div class="vbox rv ${r.platform === 'instagram' ? 'ig' : r.platform === 'youtube' ? 'yt' : ''}" data-vbox="${i}"><div class="vcard loading"><p>Loading ${PLAT[r.platform].label}</p></div></div>`
+    : `<div class="vbox"><div class="vframe loading">${scene(r)}</div></div>`;
+  const under = !REAL || live ? `<div class="prog${REAL ? ' live' : ''}" aria-hidden="true"><i></i></div>` : '';
+  const h = byLine(r);
+  const metaLine = `${h ? esc(h) + ' · ' : ''}${PLAT[r.platform].label}${REAL && !live ? ' · Tap play in the video' : ''}${!REAL ? ' · Placeholder' : ''}`;
+  const corner = REAL ? `<button class="sndbtn" data-sound type="button" aria-pressed="${soundOn}" aria-label="${soundOn ? 'Sound on' : 'Sound off'}">${soundOn ? I.soundOn : I.soundOff}</button>` : '';
+  return `<article class="slide ${REAL ? '' : 'ph'}" data-i="${i}" data-k="${esc(k)}" style="--gs:${hslA(glowCols(palOf(r))[0], .4)}" aria-label="Video ${i + 1} of ${n}">
+    <div class="vbox-wrap">${box}</div>
+    <div class="finfo">
+      ${under}
+      <div class="fsender"><div class="fwho"><div class="l1">${savedLine(r)}</div><div class="l2">${statusLine(r, i, n)}</div></div>${corner}</div>
+      <h2 class="ftitle">${esc(titleOf(r))}</h2>
+      <div class="fmeta">${metaLine}</div>
+      <div class="frow3">
+        <button class="fact" type="button" data-remove="${esc(k)}" aria-label="Remove from Reel Feed">${I.trash}</button>
+        <span class="grow"></span>
+        <a class="pill ghost openapp" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open in ${PLAT[r.platform].app}${I.ext}</a>
+      </div>
+    </div>
+  </article>`;
+}
+const statusLine = (r, i, n) => `${r.watched ? '' : '<i class="dot"></i>Unwatched <span aria-hidden="true">·</span> '}${i + 1} of ${n}`;
+function endHtml() {
+  return `<div class="endslide"><div class="t22">You're all caught up</div><p>That's every video you've saved.</p><button class="pill primary" type="button" data-fview="browse">Browse</button></div>`;
+}
+// A video counts as watched once it has been open in Watch for a moment (a quick swipe past does not count).
+function markWatched(k) {
+  const r = byKey(k); if (!r || r.watched) return;
+  r.watched = true; saveList();
+  const sl = $(`.slide[data-k="${CSS.escape(k)}"]`, HOST.sc);
+  if (sl && state.feed) sl.querySelector('.l2').innerHTML = statusLine(r, +sl.dataset.i, state.feed.ids.length);
+}
+function setActive(i) {
+  const fd = state.feed; if (!fd || !Number.isFinite(i)) return;
+  const n = fd.ids.length;
+  if (i === fd.i) return;
+  const prev = fd.i;
+  fd.i = i;
+  $$('.slide', HOST.sc).forEach(s => s.classList.toggle('active', +s.dataset.i === i));
+  clearTimeout(watchT);
+  if (i < n) {
+    const k = fd.ids[i], r = byKey(k);
+    if (r) setGlow($('#glow'), glowCols(palOf(r)));
+    watchT = setTimeout(() => { if (state.feed === fd && fd.i === i && !document.hidden) markWatched(k); }, 1500);
+  }
+  // placeholder mode: a short shimmer stands in for the player loading
+  if (!REAL) [i, i + 1].forEach(k => { const f = $(`.slide[data-i="${k}"] .vframe.loading`, HOST.sc); if (f) setTimeout(() => f.classList.remove('loading'), 380); });
+  if (REAL && fd.live) pActivate(i, prev);
+}
+function advanceFrom(i) {
+  const fd = state.feed;
+  if (!fd || fd.i !== i) return;
+  HOST.sc.scrollTo({ top: (i + 1) * HOST.sc.clientHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+HOST.sc.addEventListener('scroll', () => {
+  if (state.feed && HOST.sc.clientHeight) setActive(Math.round(HOST.sc.scrollTop / HOST.sc.clientHeight));
+}, { passive: true });
+HOST.sc.addEventListener('animationend', e => {
+  if (e.animationName !== 'prog' || !state.feed) return;
+  const s = e.target.closest('.slide');
+  if (s && +s.dataset.i === state.feed.i) advanceFrom(state.feed.i);
+});
+
+/* ---------- Browse ----------
+   Apple TV's home, for saved videos: a hero of what's unwatched (swipe sideways through up to five, newest first),
+   then Up next, then Watched, then a quiet line with Export. */
+const home = { ids: [], cur: null };
+function heroIds() {
+  const all = LK.sortRecords(list), fresh = all.filter(r => !r.watched);
+  let ids = (fresh.length ? fresh : all).slice(0, 5).map(keyOf);
+  if (home.cur && byKey(home.cur) && !ids.includes(home.cur) && home.ids.includes(home.cur)) {   // just watched: keep it where it was
+    ids.splice(Math.min(home.ids.indexOf(home.cur), ids.length), 0, home.cur); ids = ids.slice(0, 5);
+  }
+  return ids;
+}
+function heroSlide(k, i, n) {
+  const r = byKey(k), rt = rate(palOf(r)), h = byLine(r);
+  const art = rt.weak ? `<span class="hposter">${scene(r)}</span>` : `<span class="hart">${scene(r)}</span>`;
+  return `<article class="hslide ${rt.weak ? 'weak' : 'strong'}" data-hi="${i}" style="--lift:${hslA(rt.lift, 1)};--sat:${rt.grey ? .9 : 1.3}" aria-label="${i + 1} of ${n}">
+    <span class="hbg">${scene(r)}</span>${art}<span class="hshade"></span>
+    <div class="hcopy">
+      <h2 class="htitle">${esc(titleOf(r))}</h2>
+      <div class="hwho"><span>${savedLine(r)}</span>${r.watched ? '' : '<span class="hnew"><i class="dot"></i>New</span>'}</div>
+      <div class="hline">${PLAT[r.platform].label}${h ? ' · ' + esc(h) : ''}</div>
+      <div class="hbtns"><button class="pill primary hplay" type="button" data-play="${esc(k)}">${I.play}Play</button><a class="hround" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open in ${PLAT[r.platform].app}">${I.ext}</a></div>
+    </div>
+  </article>`;
+}
+function tileHtml(r) {
+  const k = keyOf(r);
+  return `<button class="tile" type="button" data-play="${esc(k)}" aria-label="${esc(titleOf(r))}${r.watched ? '' : ', new'}"><span class="tthumb" style="--sh:${hslA(rate(palOf(r)).dom, .28)}">${scene(r)}${r.watched ? '' : '<i class="tnew"></i>'}</span><span class="tcap">${esc(titleOf(r))}</span><span class="tmeta">${PLAT[r.platform].label} · ${ago(minsAgo(r))}</span></button>`;
+}
+function renderHome() {
+  const ids = home.ids = heroIds();
+  const start = Math.max(0, ids.indexOf(home.cur));
+  home.cur = ids[start] || null;
+  const all = LK.sortRecords(list), next = all.filter(r => !r.watched), seen = all.filter(r => r.watched);
+  const shelf = (title, rs) => rs.length ? `<section class="shelf"><h2 class="shelf-h">${title}</h2><div class="shelf-row">${rs.map(tileHtml).join('')}</div></section>` : '';
+  $('#homeBody').innerHTML = `<section class="hero" aria-roledescription="carousel" aria-label="Unwatched">
+      ${ids.length ? `<div class="htrack" id="htrack">${ids.map((k, i) => heroSlide(k, i, ids.length)).join('')}</div>
+      <div class="hdots" aria-hidden="true">${ids.length > 1 ? ids.map((_, i) => `<i${i === start ? ' class="on"' : ''}></i>`).join('') : ''}</div>`
+      : '<div class="hempty">Copy a link in TikTok, then tap Add.</div>'}
+    </section>
+    ${shelf('Up next', next)}${shelf('Watched', seen)}
+    ${list.length ? `<div class="bfoot"><span class="label num">${list.length} saved on this phone</span><button class="linkbtn" type="button" id="exportBtn">${I.down}Export list</button></div>` : ''}`;
+  const tr = $('#htrack');
+  if (tr) {
+    tr.scrollLeft = start * tr.clientWidth;
+    requestAnimationFrame(() => { tr.scrollLeft = start * tr.clientWidth; });
+    tr.addEventListener('scroll', () => {
+      const i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth));
+      if (!ids[i] || ids[i] === home.cur) return;
+      home.cur = ids[i];
+      $$('.hdots i').forEach((d, k) => d.classList.toggle('on', k === i));
+      glowNow();
+    }, { passive: true });
+  }
+  glowNow();
+}
+/* The glow follows the video on screen (Watch) or the hero still (Browse); a weak still lends its lifted colour. */
+function glowNow() {
+  const g = $('#glow');
+  if (state.view === 'watch') {
+    const fd = state.feed, ids = fd ? fd.ids : (tabFeed.ids || sortedKeys());
+    const i = fd ? Math.min(Math.max(fd.i, 0), ids.length - 1) : Math.max(0, ids.indexOf(tabFeed.cur));
+    const r = byKey(ids[i]); if (r) setGlow(g, glowCols(palOf(r)));
+    return;
+  }
+  const r = byKey(home.cur); if (!r) return;
+  const p = palOf(r), rt = rate(p), cols = glowCols(p);
+  setGlow(g, rt.weak ? [rt.lift, rt.lift, cols[1]] : cols);
+}
+
+/* ---------- real players ----------
+   Official players only: TikTok's Embed Player, Instagram's embed, YouTube's IFrame Player API, Snapchat's embed.
+   Only the current video and the next one are mounted (TikTok rate-limits heavy reloading), and only one plays.
+   Instagram and Snapchat have no play or pause control, so they mount only while on screen and are removed
+   when you swipe away, which is what stops them. */
+const ID_OK = LK.ID_OK;
+const hasControl = s => s && (s.kind === 'tiktok' || s.kind === 'youtube');
+let PL = [], soundOn = false, ytPoll = 0, ytApi = null, held = false;
+function pInit(ids) {
+  PL = ids.map((k, i) => { const r = byKey(k); return { i, rec: r, kind: r ? r.platform : null, id: r ? r.videoId : null, frame: null, yt: null, ready: false, failed: false, loading: false }; });
+  clearInterval(ytPoll);
+  ytPoll = setInterval(() => {
+    const c = state.feed && PL[state.feed.i];
+    if (c && c.kind === 'youtube' && c.yt && c.ready) { try { const d = c.yt.getDuration(); if (d > 0) setProg(c.i, c.yt.getCurrentTime() / d); } catch (e) {} }
+  }, 300);
+  updateSound();
+}
+function pTeardown() {
+  PL.forEach(s => { if (s.yt) { try { s.yt.destroy(); } catch (e) {} } if (s.frame) s.frame.remove(); });
+  PL = []; held = false; clearInterval(ytPoll);
+}
+const vboxOf = i => state.feed ? $(`[data-vbox="${i}"]`, HOST.sc) : null;
+const near = i => !!state.feed && (i === state.feed.i || i === state.feed.i + 1);
+function setProg(i, f) {
+  const el = state.feed && $(`.slide[data-i="${i}"] .prog.live i`, HOST.sc);
+  if (el) el.style.width = (Math.max(0, Math.min(1, f || 0)) * 100) + '%';
+}
+// The card that sits in the video box while loading or when a video cannot play. Never placed over a player.
+function pCard(s, title, text, link, retry) {
+  const box = vboxOf(s.i); if (!box) return;
+  box.querySelectorAll('.vcard').forEach(c => c.remove());
+  const c = document.createElement('div'); c.className = title ? 'vcard' : 'vcard loading';
+  c.innerHTML = title ? `${I.alert}<div class="vct">${esc(title)}</div>${text ? `<p>${esc(text)}</p>` : ''}` : `<p>Loading ${PLAT[s.kind].label}</p>`;
+  if (retry) { const b = document.createElement('button'); b.type = 'button'; b.className = 'pill ghost'; b.textContent = 'Try again'; b.addEventListener('click', retry); c.append(b); }
+  if (link) { const a = document.createElement('a'); a.className = 'pill primary'; a.href = s.rec.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = 'Open in ' + PLAT[s.kind].app; c.append(a); }
+  box.prepend(c);
+}
+function pFail(s, title, text, retry) {
+  pUnmount(s.i); s.failed = true;
+  pCard(s, title, text, true, retry ? () => { s.failed = false; pCard(s); if (near(s.i)) pMount(s.i); updateSound(); } : null);
+  updateSound();
+}
+function frameFor(src, title) {
+  const f = document.createElement('iframe');
+  f.src = src; f.title = title;
+  f.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+  f.setAttribute('allowfullscreen', '');
+  f.referrerPolicy = 'strict-origin-when-cross-origin';
+  return f;
+}
+function pMount(i) {
+  const s = PL[i]; if (!s || !s.rec || s.frame || s.yt || s.failed || s.loading) return;
+  const box = vboxOf(i); if (!box) return;
+  const n = `${PLAT[s.kind].app} video ${i + 1}`;
+  if (s.kind === 'tiktok') return mountTT(s, box);
+  if (s.kind === 'youtube') return mountYT(s, box);
+  let f;
+  if (s.kind === 'instagram' && ID_OK.instagram.test(s.id)) f = frameFor(`https://www.instagram.com/${/instagram\.com\/p\//.test(s.rec.url) ? 'p' : 'reel'}/${s.id}/embed/`, n);
+  else if (s.kind === 'snapchat' && ID_OK.snapchat.test(s.id)) { f = frameFor(`https://www.snapchat.com/spotlight/${s.id}/embed`, n); f.className = 'snapchat-embed-iframe'; }
+  if (!f) return;
+  s.frame = f; box.append(f);
+}
+function mountTT(s, box) {
+  if (!ID_OK.tiktok.test(s.id)) return;
+  // A TikTok player loaded with autoplay=0 never reports ready, so every one loads with autoplay=1 and the
+  // preloaded neighbour is paused as soon as it reports ready. muted=1 keeps it silent until then.
+  const f = frameFor(`${TT_ORIGIN}/player/v1/${s.id}?autoplay=1&muted=1&loop=0&controls=1&description=0&music_info=0&rel=0&native_context_menu=0`, `TikTok video ${s.i + 1}`);
+  s.frame = f; s.ready = false; box.append(f);
+}
+function ttSend(s, type, value) {
+  if (!s || !s.frame || !s.frame.contentWindow) return;
+  try { s.frame.contentWindow.postMessage({ type, value, 'x-tiktok-player': true }, TT_ORIGIN); } catch (e) {}
+}
+function loadYT() {
+  if (!ytApi) ytApi = new Promise((res, rej) => {
+    if (window.YT && window.YT.Player) return res(window.YT);
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (typeof prev === 'function') prev(); res(window.YT); };
+    const sc = document.createElement('script');
+    sc.src = 'https://www.youtube.com/iframe_api'; sc.async = true;
+    sc.onerror = () => { ytApi = null; sc.remove(); rej(new Error('yt api')); };
+    document.head.append(sc);
+  });
+  return ytApi;
+}
+function mountYT(s, box) {
+  if (!ID_OK.youtube.test(s.id)) return;
+  s.loading = true;
+  loadYT().then(YT => {
+    s.loading = false;
+    if (PL[s.i] !== s || !near(s.i) || s.yt || s.failed) return;
+    // YouTube's rules: nothing over any part of the player, controls left on, autoplay muted only when it is
+    // the one video on screen. So the loading card is removed and the player fills the bare box.
+    box.querySelectorAll('.vcard').forEach(c => c.remove());
+    const slot = document.createElement('div'); slot.className = 'ytslot'; box.append(slot);
+    const onScreen = state.feed.i === s.i && !held;
+    s.yt = new YT.Player(slot, {
+      host: 'https://www.youtube-nocookie.com', videoId: s.id, width: '100%', height: '100%',
+      playerVars: { autoplay: onScreen ? 1 : 0, mute: 1, playsinline: 1, rel: 0, controls: 1, origin: location.origin },
+      events: {
+        onReady: () => {
+          s.ready = true;
+          if (PL[s.i] !== s || !state.feed) return;
+          if (state.feed.i === s.i && !held) { applySound(s); s.yt.playVideo(); } else s.yt.pauseVideo();
+        },
+        onStateChange: e => {
+          if (PL[s.i] !== s || !state.feed) return;
+          if (e.data === 1 && (state.feed.i !== s.i || held)) s.yt.pauseVideo();   // only one plays
+          if (e.data === 0) advanceFrom(s.i);                                       // ended: next video
+        },
+        onError: () => { if (PL[s.i] === s) pFail(s, "Can't play this one here", 'YouTube says this video cannot play outside YouTube.'); },
+      },
+    });
+  }).catch(() => {
+    s.loading = false;
+    if (PL[s.i] === s) pFail(s, "YouTube's player didn't load", 'Check the connection, then try again.', true);
+  });
+}
+function pUnmount(i) {
+  const s = PL[i]; if (!s) return;
+  if (s.yt) { try { s.yt.destroy(); } catch (e) {} s.yt = null; }
+  if (s.frame) { s.frame.remove(); s.frame = null; }
+  const box = vboxOf(i);
+  if (box) box.querySelectorAll('.ytslot, iframe').forEach(x => x.remove());
+  s.ready = false;
+  if (box && !s.failed && s.rec) pCard(s);
+  setProg(i, 0);
+}
+function pPause(s) {
+  if (!s) return;
+  if (s.kind === 'tiktok') ttSend(s, 'pause');
+  else if (s.kind === 'youtube' && s.yt && s.ready) { try { s.yt.pauseVideo(); } catch (e) {} }
+}
+function pPlay(i, fromStart) {
+  const c = PL[i]; if (!c || held) return;
+  if (c.kind === 'tiktok' && c.ready) { if (fromStart) ttSend(c, 'seekTo', 0); applySound(c); ttSend(c, 'play'); }
+  if (c.kind === 'youtube' && c.yt && c.ready) { try { if (fromStart) c.yt.seekTo(0, true); applySound(c); c.yt.playVideo(); } catch (e) {} }
+}
+function pActivate(i, prev) {
+  if (!PL.length) return;
+  const p = PL[prev];
+  if (p && prev !== i) { if (hasControl(p)) pPause(p); else pUnmount(prev); }
+  PL.forEach((s, k) => { if ((s.frame || s.yt) && !(k === i || (k === i + 1 && hasControl(s)))) pUnmount(k); });
+  pMount(i);
+  if (hasControl(PL[i + 1])) pMount(i + 1);
+  pPlay(i, true);
+  updateSound();
+}
+// The paste sheet, or leaving the app, holds the video so nothing plays underneath or in the background.
+function pHold(on) {
+  if (!REAL || !state.feed || !PL.length || held === on) return;
+  held = on;
+  const c = PL[state.feed.i];
+  // Instagram and Snapchat cannot be paused from outside, so they are removed while held and put back after
+  if (c && !hasControl(c)) { if (on) pUnmount(c.i); else pMount(c.i); return; }
+  if (on) pPause(c); else pPlay(state.feed.i, false);
+}
+function applySound(s) {
+  if (s.kind === 'tiktok') ttSend(s, soundOn ? 'unMute' : 'mute');
+  else if (s.kind === 'youtube' && s.yt && s.ready) { try { soundOn ? s.yt.unMute() : s.yt.mute(); } catch (e) {} }
+}
+function updateSound() {
+  if (!REAL) return;
+  const c = state.feed && PL[state.feed.i];
+  // every slide has its own Sound button; only the current one's player decides whether it shows
+  $$('[data-sound]').forEach(b => {
+    const sl = b.closest('.slide'), mine = !!(state.feed && sl && +sl.dataset.i === state.feed.i);
+    b.classList.toggle('na', mine && !(hasControl(c) && !c.failed));
+    b.setAttribute('aria-pressed', soundOn);
+    b.setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    b.innerHTML = soundOn ? I.soundOn : I.soundOff;
+  });
+}
+function toggleSound() {
+  soundOn = !soundOn;
+  const c = state.feed && PL[state.feed.i];
+  if (hasControl(c)) applySound(c);
+  updateSound();
+}
+window.addEventListener('message', e => {
+  if (!REAL || !PL.length) return;
+  if (e.origin === 'https://www.instagram.com') {
+    // Instagram's embed only sends layout messages (no playback state); use them to size the card.
+    const s = PL.find(x => x.frame && x.frame.contentWindow === e.source); if (!s) return;
+    let m = e.data; if (typeof m === 'string') { try { m = JSON.parse(m); } catch (err) { return; } }
+    if (m && m.type === 'MEASURE' && m.details && Number(m.details.height) > 0) s.frame.style.height = Math.min(Number(m.details.height), 2000) + 'px';
+    return;
+  }
+  if (e.origin !== TT_ORIGIN) return;
+  const s = PL.find(x => x.frame && x.frame.contentWindow === e.source); if (!s) return;
+  let d = e.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (err) { return; } }
+  if (!d || d['x-tiktok-player'] !== true) return;
+  const active = state.feed && state.feed.i === s.i;
+  switch (d.type) {
+    case 'onPlayerReady': {
+      s.ready = true;
+      const box = vboxOf(s.i); if (box) box.querySelectorAll('.vcard').forEach(c => c.remove());
+      if (active && !held) { applySound(s); ttSend(s, 'play'); } else { ttSend(s, 'mute'); ttSend(s, 'pause'); }
+      break;
+    }
+    case 'onStateChange':
+      if (d.value === 0 && active) advanceFrom(s.i);
+      else if (d.value === 1 && (!active || held)) ttSend(s, 'pause');
+      break;
+    case 'onCurrentTime': {
+      const v = d.value || {};
+      if (active && Number(v.duration) > 0) setProg(s.i, Number(v.currentTime) / Number(v.duration));
+      break;
+    }
+    case 'onPlayerError': {
+      const code = (d.value || {}).errorCode;
+      if ((code === 2005 || code === 2001) && !active) pUnmount(s.i);   // a throttled neighbour: reload when swiped to
+      else if (code === 2005 || code === 2001) pFail(s, 'TikTok is busy', "TikTok's player asked us to slow down. Give it a moment, then try again.", true);
+      else if (code === 1001) pFail(s, "Can't play this one here", 'TikTok says this video is not available.');
+      else if (code === 3002 && active) toast('Tap the video to start it', 'info');
+      break;
+    }
+  }
+});
+// Leaving the app pauses whatever plays (without reloading players, which TikTok rate-limits).
+document.addEventListener('visibilitychange', () => { if (state.feed && $('#sheet').hidden) pHold(document.hidden); });
+// iPhone Safari only shows :active pressed states when the page listens for touches
+document.addEventListener('touchstart', () => {}, { passive: true });
+
+/* ---------- getting links in ----------
+   Add reads the clipboard (in TikTok: Share, Copy link, then Add here). If the browser refuses or the clipboard is
+   empty, a small paste field opens. ?add=<link> (from an iPhone Shortcut) does the same on load. links.js cleans
+   every link: platform, short link lookup, id, tracking codes stripped, duplicates dropped. */
+let adding = false;
+function updateAddBtn() {
+  const b = $('#addBtn');
+  b.classList.toggle('primary', !list.length);   // the only thing to do on an empty feed
+  b.classList.toggle('ghost', !!list.length);
+}
+const FAIL = {
+  unsupported: () => 'Not a supported video link',
+  dead: () => 'That video is gone or private',
+  offline: () => "Couldn't reach TikTok, try again",
+  unresolvable: p => `Can't read ${PLAT[p] ? PLAT[p].app : 'these'} share links yet`,
+};
+// Returns { ok, msg }: ok when the link is in the feed (new or already there).
+async function addLink(text) {
+  if (adding) return { ok: false, msg: '' };
+  adding = true;
+  $('#addBtn').setAttribute('aria-busy', 'true');
+  const slow = setTimeout(() => toast('Checking the link', 'wait'), 350);
+  let res;
+  try { res = await LK.cleanLink(text, { fetch: (u, o) => fetch(u, o) }); }
+  catch (e) { res = { status: 'offline' }; }
+  clearTimeout(slow);
+  adding = false;
+  $('#addBtn').removeAttribute('aria-busy');
+  if (res.status !== 'ok') return { ok: false, msg: FAIL[res.status] ? FAIL[res.status](res.platform) : FAIL.unsupported() };
+  const k = keyOf(res.record), a = LK.addRecord(list, res.record);
+  if (!a.added) { rebuild(k); return { ok: true, msg: 'Already in your feed', kind: 'info' }; }
+  list = a.list;
+  const m = Object.assign({}, meta[k], res.meta);
+  if (Object.keys(m).length) { meta[k] = m; saveMeta(); }
+  saveList();
+  rebuild(k, true);
+  return { ok: true, msg: 'Added to your feed' };
+}
+async function addAndTell(text) {
+  const r = await addLink(text);
+  if (r.msg) toast(r.msg, r.ok ? r.kind : 'info');
+  return r;
+}
+async function onAddTap() {
+  if (adding) return;
+  let text = null;
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('no clipboard');
+    text = await navigator.clipboard.readText();
+  } catch (e) { return openPaste(''); }                          // refused, or no clipboard access here
+  if (!text || !text.trim()) return openPaste('Nothing was copied. Paste the link here.');
+  if (!LK.extractUrl(text)) return openPaste('No link was copied. Paste it here.');
+  addAndTell(text);
+}
+function openPaste(note) {
+  openSheet(`<div class="shead"><h2 id="sheetTitle">Add a link</h2><button class="iconbtn" type="button" data-close aria-label="Close">${I.x}</button></div>
+    <p class="snote">${esc(note || 'Paste a TikTok, YouTube, Instagram or Snapchat link.')}</p>
+    <form class="crow" id="pasteForm" autocomplete="off"><input class="field" id="pasteInput" type="url" inputmode="url" placeholder="Paste link" aria-label="Video link" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"><button class="pill primary" type="submit">Add</button></form>
+    <p class="smsg" id="pasteMsg" role="status"></p>`);
+}
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'pasteForm') return;
+  e.preventDefault();
+  const inp = $('#pasteInput'), msg = $('#pasteMsg');
+  if (!inp.value.trim()) { msg.textContent = 'Paste a link first.'; inp.focus(); return; }
+  msg.textContent = '';
+  const r = await addLink(inp.value);
+  if (r.ok) { closeSheet(); toast(r.msg, r.kind); }
+  else if (r.msg) { hideToast(); msg.textContent = r.msg + '.'; }
+});
+
+/* ---------- sheet ---------- */
+let sheetT;
+function openSheet(html) {
+  const s = $('#sheet'), b = $('#backdrop');
+  clearTimeout(sheetT);
+  s.innerHTML = `<div class="grabzone" aria-hidden="true"><div class="grab"></div></div>${html}`;
+  s.style.transform = ''; b.style.opacity = '';
+  s.hidden = false; b.hidden = false;
+  pHold(true); device.classList.add('sheeton');
+  void s.offsetWidth;
+  s.classList.add('show'); b.classList.add('show');
+  const f = s.querySelector('input'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 50);
+}
+function closeSheet() {
+  const s = $('#sheet'), b = $('#backdrop');
+  if (s.hidden) return;
+  if (document.activeElement && s.contains(document.activeElement)) document.activeElement.blur();
+  s.classList.remove('dragging');
+  s.style.transform = ''; b.style.opacity = '';
+  s.classList.remove('show'); b.classList.remove('show');
+  clearTimeout(sheetT);
+  sheetT = setTimeout(() => { s.hidden = true; b.hidden = true; }, 320);
+  device.classList.remove('sheeton');
+  if (!document.hidden) pHold(false);
+}
+$('#backdrop').addEventListener('click', closeSheet);
+// drag the sheet down by its grab handle or title row: follows the finger, closes past a threshold, else springs back
+(() => {
+  const s = $('#sheet'), b = $('#backdrop');
+  let d = null;
+  s.addEventListener('pointerdown', e => {
+    if (e.button > 0 || !e.target.closest('.grabzone, .shead') || e.target.closest('button, input')) return;
+    d = { y0: e.clientY, dy: 0, lastY: e.clientY, lastT: performance.now(), v: 0 };
+    try { s.setPointerCapture(e.pointerId); } catch (err) {}
+    s.classList.add('dragging');
+  });
+  s.addEventListener('pointermove', e => {
+    if (!d) return;
+    const now = performance.now(), raw = e.clientY - d.y0;
+    d.v = (e.clientY - d.lastY) / Math.max(1, now - d.lastT); d.lastY = e.clientY; d.lastT = now;
+    d.dy = raw < 0 ? raw / 5 : raw;          // a little give upwards, full travel downwards
+    s.style.transform = `translateY(${d.dy}px)`;
+    b.style.opacity = String(Math.max(0, 1 - Math.max(0, d.dy) / s.offsetHeight));
+  });
+  const up = () => {
+    if (!d) return;
+    const x = d; d = null;
+    if (x.dy > Math.min(140, s.offsetHeight * 0.3) || (x.v > 0.5 && x.dy > 24)) return closeSheet();
+    s.classList.remove('dragging');
+    s.style.transform = ''; b.style.opacity = '';
+  };
+  s.addEventListener('pointerup', up);
+  s.addEventListener('pointercancel', up);
+})();
+
+/* ---------- remove (with Undo) ---------- */
+function removeVideo(k) {
+  const idx = list.findIndex(r => keyOf(r) === k); if (idx < 0) return;
+  stopFeed();
+  const rec = list[idx], m = meta[k];
+  list.splice(idx, 1); saveList();
+  const ids = tabFeed.ids || [], j = ids.indexOf(k);
+  if (j >= 0) ids.splice(j, 1);
+  rebuild(ids.length ? ids[Math.min(Math.max(j, 0), ids.length - 1)] : null);
+  toast('Removed', 'ok', () => {
+    if (byKey(k)) return;
+    list.splice(Math.min(idx, list.length), 0, rec); saveList();
+    if (m) { meta[k] = m; saveMeta(); }
+    stopFeed();
+    if (tabFeed.ids && j >= 0) tabFeed.ids.splice(Math.min(j, tabFeed.ids.length), 0, k);
+    rebuild(k);
+    toast('Back in your feed');
+  });
+}
+
+/* ---------- export: the saved list as a JSON file, so nothing is lost when stage 2 (the iPhone app) arrives ---------- */
+async function exportList() {
+  const d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const data = JSON.stringify({ format: 'reel-feed-links', version: 1, exportedAt: new Date().toISOString(), links: list }, null, 2);
+  const name = `reel-feed-${day}.json`;
+  // On a phone the share sheet is the dependable way to save a file (Save to Files); elsewhere a plain download.
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare && typeof File === 'function') {
+    try {
+      const file = new File([data], name, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Reel Feed links' }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast(`Exported ${list.length} link${list.length === 1 ? '' : 's'}`);
+}
+
+/* ---------- clicks ---------- */
+device.addEventListener('click', e => {
+  const pick = sel => e.target.closest(sel);
+  let el;
+  if (pick('#toastUndo')) { const u = toastUndo; hideToast(); if (u) u(); return; }
+  if (pick('#addBtn')) return onAddTap();
+  if (pick('[data-sound]')) return toggleSound();
+  if ((el = pick('[data-fview]'))) return setView(el.dataset.fview);
+  if ((el = pick('[data-play]'))) {
+    const k = el.dataset.play; if (!byKey(k)) return;
+    stopFeed(); tabFeed.cur = k;
+    if (tabFeed.ids && !tabFeed.ids.includes(k)) tabFeed.ids = null;
+    return setView('watch');
+  }
+  if ((el = pick('[data-remove]'))) return removeVideo(el.dataset.remove);
+  if (pick('#exportBtn')) return exportList();
+  if (pick('[data-close]')) return closeSheet();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet();
+});
+
+/* ---------- boot ---------- */
+// ?add=<link> (or #add=<link>, which never reaches the web server): save it, then take it out of the address so a
+// reload does not add it again. Everything except ?mode= is dropped, in case the link arrived unencoded.
+let incoming = Q.get('add');
+const hashAdd = /^#add=(.+)$/.exec(location.hash);
+if (incoming === null && hashAdd) { try { incoming = decodeURIComponent(hashAdd[1]); } catch (e) { incoming = hashAdd[1]; } }
+if (incoming !== null || hashAdd) {
+  const keep = new URLSearchParams(); if (Q.get('mode')) keep.set('mode', Q.get('mode'));
+  try { history.replaceState(null, '', location.pathname + (keep.toString() ? '?' + keep : '')); } catch (e) {}
+}
+// drop display extras for videos no longer saved
+Object.keys(meta).forEach(k => { if (!byKey(k)) delete meta[k]; });
+updateAddBtn();
+// with a link arriving, the feed starts once it is saved, so the players load once, on the new video
+if (incoming && incoming.trim()) addAndTell(incoming).then(() => setView(state.view));
+else setView('watch');
+if (!storageOk) setTimeout(() => toast('Saving is off in this browser', 'info'), 600);
+if (LOCAL) window.__reel = { players: () => PL, state, list: () => list, real: REAL };   // for local checks only
+})();
+</script>
+</body>
+</html>
