@@ -223,3 +223,16 @@ test('records read back from storage are re-checked', () => {
   assert.deepEqual(out[1], { url: 'https://www.tiktok.com/@/video/' + TT_ID, platform: 'tiktok', videoId: TT_ID, savedAt: '1970-01-01T00:00:00.000Z', watched: false, sender: null });
   assert.deepEqual(L.sanitizeRecords('garbage'), []);
 });
+
+test('pasted text with words around the link, or a link without https, still works', async () => {
+  const f = stubFetch([['tiktok.com/oembed', { status: 200, body: { embed_product_id: TT_ID } }]]);
+  const a = await L.cleanLink('Watch this https://youtu.be/' + YT_ID + '?si=abc 😂', { fetch: noFetch });
+  assert.equal(a.status, 'ok');
+  assert.equal(a.record.videoId, YT_ID);
+  const b = await L.cleanLink('vm.tiktok.com/ZMabc123/', { fetch: f });
+  assert.equal(b.status, 'ok');
+  assert.equal(b.record.videoId, TT_ID);
+  assert.equal(f.calls[0], 'https://www.tiktok.com/oembed?url=' + encodeURIComponent('https://vm.tiktok.com/ZMabc123/'));
+  const c = await L.cleanLink('lol www.instagram.com/reel/' + IG_CODE + '/?igsh=x', { fetch: noFetch });
+  assert.equal(c.record.url, 'https://www.instagram.com/reel/' + IG_CODE + '/');
+});
