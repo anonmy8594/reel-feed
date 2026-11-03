@@ -648,6 +648,7 @@ function setActive(i) {
 function advanceFrom(i) {
   const fd = state.feed;
   if (!fd || fd.i !== i) return;
+  if (i < fd.ids.length) markWatched(fd.ids[i]);                 // played to the end, even if shorter than the 1.5s rule
   HOST.sc.scrollTo({ top: (i + 1) * HOST.sc.clientHeight, behavior: reduceMotion ? 'auto' : 'smooth' });
 }
 HOST.sc.addEventListener('scroll', () => {
@@ -1008,11 +1009,19 @@ async function addAndTell(text) {
 }
 async function onAddTap() {
   if (adding) return;
-  let text = null;
+  let text = null, slow = false;
+  // A clipboard request the browser holds open (a permission prompt left unanswered) must not leave the tap looking dead.
+  const slowT = setTimeout(() => { slow = true; openPaste(''); }, 3000);
   try {
     if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('no clipboard');
     text = await navigator.clipboard.readText();
-  } catch (e) { return openPaste(''); }                          // refused, or no clipboard access here
+  } catch (e) { clearTimeout(slowT); if (!slow) openPaste(''); return; }  // refused, or no clipboard access here
+  clearTimeout(slowT);
+  if (slow) {                                                    // answered after the paste sheet opened: use it if the sheet is still empty
+    const inp = $('#pasteInput');
+    if (inp && !inp.value.trim() && text && LK.extractUrl(text)) { closeSheet(); addAndTell(text); }
+    return;
+  }
   if (!text || !text.trim()) return openPaste('Nothing was copied. Paste the link here.');
   if (!LK.extractUrl(text)) return openPaste('No link was copied. Paste it here.');
   addAndTell(text);
